@@ -1,59 +1,106 @@
 ## Validation of Histopathology Foundation Models (Hist_FMs)
 
-This repository provides modularized Python scripts for **benchmarking and validating histopathology foundation models (FMs)** on downstream tasks such as feature extraction, linear probing, and k-nearest neighbor (kNN), linear regression and copy detection evaluation.
-It is designed to work seamlessly with pre-trained models (e.g., DINO, Virchow, UNI, PLUTO, etc.) and custom datasets across multiple histological stains (H&E, PAS, Silver, TRI).
+This repository provides modularized Python scripts for benchmarking and validating histopathology foundation models (HFMs) on downstream tasks such as linear probing, k-nearest neighbor (kNN), ABMIL (classification and regerssion) evaluation.
+It is designed to work seamlessly with pre-trained HFMs (e.g., Virchow, UNI, H-optimus, etc.) and custom datasets across multiple histological stains (H&E, PAS, Silver, IHC).
 
 ---
 
 ### Repository Structure
 
 ```
-Feature-Extraction-from-FMs-and-Probing/
+project_root/
 │
-├── Extract_FE_modularized.py   # Feature extraction from WSIs or tiles using pretrained FMs
-├── kNN_probing.py              # k-Nearest Neighbor probing for representation quality evaluation
-├── linear_probing.py           # Linear classifier training for frozen feature evaluation
-├── model_builders.py           # Model construction utilities for different architectures
-├── utils.py                    # Helper functions for data handling, logging, and preprocessing
-├── vision_transformer.py       # Custom Vision Transformer backbone definitions or wrappers
-└── requirements.txt            # List of Python dependencies
+├── pyproject.toml
+└── src/
+      └── kidney_hfm_eval/
+             ├── __init__.py
+             ├── ABMIL_classification/
+             ├── ABMIL_regression/
+             ├── Copy_detection/              # Copy-detection & augmentation-invariance analysis
+             ├── Feature_Extraction/          # Model builders + tile/WSI feature extraction
+             ├── MIL_preprocessing/           # Fold generation + embedding packing utilities
+             ├── Probing/                     # Linear probing + kNN probing utilities
+             ├── Regression/                  # Ridge regression (quantitative probing)
+             └── Statistical_analysis/        # Friedman/Wilcoxon tests + Holm-Bonferroni + CLD grouping + plots
+│
+├── requirements.txt
+├── environment.yml
+├── LICENSE
+└── readme.md                        
 ```
 
 ---
 
 ### Overview of the Pipeline
 
-1. **Feature Extraction** (`Extract_FE_modularized.py`):
-
-   * Extracts embeddings from WSIs or image tiles using pre-trained histopathology foundation models.
-   * Outputs features in `.pt` format for downstream analysis.
-
-2. **Feature Evaluation**
-
-   * **Linear Probing** (`linear_probing.py`): Trains a shallow linear classifier on frozen embeddings to assess feature separability.
-   * **kNN Probing** (`kNN_probing.py`): Performs non-parametric evaluation to measure representational robustness.
-3. **Model Management**
-
-   * **Linear regression** (`linear_regression.py`): Trains a ridge regression model on frozen embeddings.
-   * **Copy Detection** (`copy_detectopm.py`): Evaluates the embedding quality under various augmentations.
-
-4. **Model Management**
-
-   * **Model Builders** (`model_builders.py`): Handles model loading (ViT, DINOv2, etc.) and configuration.
-   * **Vision Transformer** (`vision_transformer.py`): Implements or extends transformer backbones with histopathology-specific modifications.
-
-5. **Utilities**
-
-   * **utils.py**: Contains reusable helper functions for file I/O, metrics computation, dataset organization, and visualization.
+The repository provides an end-to-end framework for evaluating HFMs across tile-level, instance-level, and slide-level tasks. The workflow consists of four major components:
 
 ---
 
-### Installation
+### **1. Feature Extraction**
+
+**Scripts:** `kidney_hfm_eval/Feature_Extraction/`
+
+* Extracts tile-level or WSI-level embeddings using a variety of pretrained HFMs (e.g., UNI, Virchow, Hibou, SP22M, SP85M, Gigapath).
+* Outputs standardized `.pt` embedding files and metadata for downstream tasks.
+
+
+### **2. Feature Evaluation (Probing Stage)**
+
+Probing assesses the quality of frozen HFM embeddings without fine-tuning.
+
+#### **a. Linear Probing**
+
+**Script:** `kidney_hfm_eval/Probing`
+
+* Trains a logistic regression classifier or regressor on top of frozen embeddings.
+* Measures separability, embedding structure, and task-specific predictive signal.
+
+#### **b. kNN Probing**
+
+**Script:** `kidney_hfm_eval/Probing`
+
+* Performs non-parametric nearest-neighbor evaluation.
+* Serves as a robustness check for feature quality, insensitive to model optimization choices.
+
+#### **c. Copy-Detection Probing**
+
+**Folder:** `kidney_hfm_eval/Copy_detection/`
+
+* Quantifies embedding specificity and redundancy across models.
+* Useful for measuring overfitting/embedding collapse.
+
+### **3. MIL Modeling (Slide-Level Classification/Regression)**
+
+**Folders:** `kidney_hfm_eval/ABMIL_classification/`, `kidney_hfm_eval/ABMIL_regression/`
+
+* Implements Attention-based MIL (ABMIL) networks for slide-level prediction.
+* Includes nested or repeated cross-validation pipelines, hyperparameter sweeps, class-balancing utilities, and model selection.
+* Provides complete training + evaluation workflow for downstream slide-level tasks.
+
+### **4. Model Management**
+
+**Scripts:** `model_builders.py`, `vision_transformer.py`
+
+* Handles loading of HFMs (DINOv2, ViTs-based H-optimus, Virchow, Hibou, UNI).
+* Ensures consistent preprocessing pipelines across models.
+* Supports custom architectures or adaptation modules for histopathology.
+
+### **5. Statistical Analysis & Visualization**
+
+**Folder:** `kidney_hfm_eval/Statistical_analysis`
+
+* Performs Friedman tests, Wilcoxon tests, Holm-Bonferroni correction, and Compact Letter Display (CLD) grouping for model comparisons.
+* Generates violin/box plots, heatmaps, and summary figures used in benchmarking papers.
+---
+
+
+### Github based Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/SarderLab/Feature-Extraction-from-FMs-and-Probing-.git
-cd Feature-Extraction-from-FMs-and-Probing
+git clone https://github.com/<your-username>/Validation_of_Hist_FMs_new.git
+cd Validation_of_Hist_FMs_new/Github\ code
 
 # (Recommended) Create and activate a conda environment
 conda create -n hist_fm python=3.10 -y
@@ -63,85 +110,49 @@ conda activate hist_fm
 pip install -r requirements.txt
 ```
 
----
-
-### Usage
-
-Example workflow for feature extraction and probing:
+### Pypi based Installation
 
 ```bash
-# Step 1: Extract features
-python Extract_FE_modularized.py \
-    --input_dir /path/to/tiles \
-    --output_dir /path/to/features \
-    --model_name DINOv2_Large
-
-# Step 2: Run linear probing
-python linear_probing.py \
-    --features_dir /path/to/features \
-    --labels_csv /path/to/labels.csv
-
-# Step 3: Run kNN probing
-python kNN_probing.py \
-    --features_dir /path/to/features \
-    --labels_csv /path/to/labels.csv
+# Clone the repository
+pip install kidney_hfm_eval
+import kidney_hfm_eval
 ```
-.
-..
-...
----
-
-### Supported Models
-
-* DINO / DINOv2
-* ViT-Base / ViT-Large / ViT-Huge
-* Virchow, UNI, Hibou, SP22M, SP85M
-* Any compatible PyTorch-based vision backbone
-* Model checkpoints can be accessed [here](https://uflorida-my.sharepoint.com/:f:/r/personal/harishwarreddy_k_ufl_edu/Documents/FM_model_checkpoints?csf=1&web=1&e=2w5sOU)
-
----
-
-### Outputs
-
-* Extracted feature tensors (`.pt`)
-* Linear probing accuracy / loss CSV files
-* kNN probing metrics (accuracy, precision, recall, F1)
-* Log files for each experiment
-
----
 
 ### Author & Contact
 
-**Harishwar Reddy Kasireddy**
-Ph.D. Student, University of Florida
-Sarder Lab – Intelligent Critical Care Center
-[harishwarreddy.k@ufl.edu](mailto:harishwarreddy.k@ufl.edu)
+**Harishwar Reddy Kasireddy**  
+Ph.D. Student, University of Florida  
+Sarder Lab – Intelligent Critical Care Center  
+[harishwarreddy.k@ufl.edu](mailto:harishwarreddy.k@ufl.edu)  
+https://github.com/K-Harishwar-Reddy
 
 ---
+## Usage
 
-## Feature Extraction — `Extract_FE_modularized.py`
+### Feature Extraction 
 
 ###  Overview
 
-`Extract_FE_modularized.py` performs **sequential feature extraction** from histopathology image tiles or patches using a registry of **foundation models (FMs)** such as **UNI**, **Virchow**, **Hibou**, **SP22M**, **Prov-Gigapath**, and others.
+Performs sequential feature extraction from histopathology image tiles or patches using a registry of HFMs such as UNI, Virchow, Hibou, SP22M, Prov-Gigapath, H-optimus, and others.
 
-This script serves as the **first stage** of the histopathology FM validation pipeline, generating `.pt` feature tensors for downstream linear or kNN probing.
+This script serves as the **first stage** of the HFM benchmarking pipeline, generating `.pt` feature tensors for downstream linear or kNN probing.
 
 ---
 
 ### Key Features
 
-* Supports **multiple foundation models**: UNI, Virchow, Hibou, H-optimus, SP22M, SP85M, Prov-Gigapath, etc.
-* **Sequential extraction** — builds one model at a time to minimize GPU memory usage.
-* Fully **deterministic and reproducible**: fixed cuDNN behavior, deterministic GEMMs.
-* **Automatic directory creation** and safe skipping of existing `.pt` files.
+* Supports multiple HFMs: UNI, Virchow, Hibou, H-optimus, SP22M, SP85M, Prov-Gigapath, etc.
+* Sequential extraction:  builds one model at a time to minimize GPU memory usage.
+* Fully deterministic and reproducible: TF32 disabled, fixed cuDNN behavior, deterministic GEMMs.
+* Automatic directory creation and safe skipping of existing `.pt` files.
 * Compatible with CUDA or CPU fallback.
 * Configurable from the command line with flexible argument parsing.
+
 ---
 
 ### Input and Output Structure
 
-#### **Input:**
+#### **1. Input:**
 
 A directory tree of tiles or patches:
 
@@ -174,562 +185,333 @@ For each selected model, a parallel directory containing per-image feature tenso
 
 Each `.pt` file contains a single PyTorch tensor corresponding to the feature embedding extracted by the model.
 
----
 
-### Command-Line Arguments
+### **2. Script to Run Extraction**
 
-| Argument          | Type                   | Description                                                                  |
-| ----------------- | ---------------------- | ---------------------------------------------------------------------------- |
-| `--input_root`    | `str`                  | Path to the input directory containing all image tiles.                      |
-| `--output_base`   | `str`                  | Root directory where feature folders for each model will be created.         |
-| `--models`        | `list[str]` (optional) | Space-separated list of models to extract (default: all models in registry). |
-| `--skip_existing` | `flag`                 | Skip already processed images (default: `True`).                             |
+Create a Python script (e.g., `run_tile_extraction.py`) and insert the following:
 
----
+```python
+from src.kidney_hfm_eval.Feature_Extraction.Extract_FE_tile import run_extraction_model_by_model, model_builders_tile
+import torch
 
-### Supported Models
+# Define input and output directories
+INPUT_ROOT = "/path/to/your/tiles"
+OUTPUT_BASE = "/path/to/save/embeddings"
 
-| Category             | Models                       |
-| -------------------- | ---------------------------- |
-| **UNI Family**       | `UNI`, `UNI2-h`              |
-| **Virchow Family**   | `Virchow`, `Virchow2`        |
-| **Hibou Family**     | `Hibou-B`, `Hibou-L`         |
-| **H-Optimus Family** | `H-optimus-0`, `H-optimus-1` |
-| **SP Models**        | `SP22M`, `SP85M`             |
-| **Other**            | `Prov-Gigapath`              |
+# Initialize device and registry
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+builders = model_builders_tile(DEVICE)
 
----
+# Specify the models you want to extract features from
+selected_models = [
+    "UNI", "UNI2-h", "Virchow", "Virchow2",
+    "SP22M", "SP85M", "H-optimus-0", "H-optimus-1",
+    "Prov-Gigapath", "Hibou-B", "Hibou-L"
+]
 
-### Example Usage
+# Create output paths for each model
+output_roots = {name: f"{OUTPUT_BASE}/{name}" for name in selected_models}
 
-#### **Extract features for all models**
-
-```bash
-python Extract_FE_modularized.py \
-    --input_root /orange/pinaki.sarder/harishwarreddy.k/Datasets/LN_PAS_Tiles \
-    --output_base /orange/pinaki.sarder/harishwarreddy.k/Validation_FM_Features \
-    --skip_existing
+# Run feature extraction
+run_extraction_model_by_model(
+    input_root=INPUT_ROOT,
+    model_builder_registry=builders,
+    output_roots=output_roots,
+    selected_models=tuple(selected_models),
+    skip_existing=True   # Skip tiles that were already processed
+)
 ```
 
-#### **Extract features for selected models only**
+###  **Optional Arguments**
 
-```bash
-python Extract_FE_modularized.py \
-    --input_root /orange/pinaki.sarder/harishwarreddy.k/Datasets/LN_PAS_Tiles \
-    --output_base /orange/pinaki.sarder/harishwarreddy.k/Validation_FM_Features \
-    --models UNI Virchow SP22M \
-    --skip_existing
-```
-
-#### **Example Output Directory Tree**
-
-```
-Validation_FM_Features/
-├── UNI/
-├── Virchow/
-├── SP22M/
-└── ...
-```
+| Argument             | Description                                           |
+| -------------------- | ----------------------------------------------------- |
+| `selected_models`    | Tuple of models to run. Remove models you don't need. |
+| `skip_existing=True` | Skips tiles whose `.pt` file is already present.      |
+| `DEVICE`             | Automatically selects GPU if available.               |
 
 ---
 
-### Notes
+## Feature Evaluation: Linear Probing & kNN Probing
 
-* Each model builder function (e.g., `build_UNI`, `build_Virchow`) is defined in [`model_builders.py`](./model_builders.py).
-* The script automatically resets CUDA cache after each model (`reset_cuda()`).
-* You can safely interrupt and resume extraction; processed files will be skipped.
-* Output `.pt` tensors are ready for downstream use with [`linear_probing.py`](./linear_probing.py) or [`kNN_probing.py`](./kNN_probing.py).
+After extracting embeddings for each HFM, you can evaluate their representation quality using **linear probing** and **k-nearest neighbor (kNN) probing**. These probes quantify how well each model separates biological classes using only frozen embeddings (no fine-tuning).
 
----
+Both probes support:
 
-## Linear Probing — `linear_probing.py`
-
-### Overview
-
-`linear_probing.py` evaluates pre-extracted **foundation model (FM) embeddings** using **logistic regression** with stratified group cross-validation and bootstrap confidence intervals.
-It provides a simple yet powerful way to assess how linearly separable the embeddings are for each foundation model (e.g., UNI, Virchow, Hibou, SP22M, Prov-Gigapath, etc.).
-
-The pipeline includes:
-
-* Stratified **Group K-Fold cross-validation** (to avoid group leakage across slides/patients).
-* Aggregation of metrics (accuracy, F1, AUROC, MCC, etc.).
-* **Bootstrap resampling** to estimate 95% confidence intervals.
-* Result outputs in `.csv` format for each evaluated foundation model.
+* Multiple HFMs
+* StratifiedGroupKFold cross-validation
+* Repeated evaluation across random seeds
+* Bootstrapped confidence intervals
 
 ---
 
-### Expected CSV File Structure
+## 1. Required Inputs
 
-Your input CSV must contain the following **three columns**:
+You need:
 
-| Column Name | Description                                                                                     | Example                          |
-| ----------- | ----------------------------------------------------------------------------------------------- | -------------------------------- |
-| `ID`        | Filename (without or with image extension) corresponding to the embedding `.pt` file.           | `slide_001_tile_12.png`          |
-| `Group_ID`  | Identifier for grouping samples (e.g., slide ID, patient ID). Used in grouped cross-validation. | `Slide_A`                        |
-| `class`     | Target label for classification (integer or string).                                            | `0` / `1` / `disease` / `normal` |
+### **1. CSV file (`csv_file`)**
 
-#### Example `metadata.csv`
-
-```csv
-ID,Group_ID,class
-tile_001.png,Slide_A,0
-tile_002.png,Slide_A,1
-tile_003.png,Slide_B,0
-tile_004.png,Slide_B,1
-```
-
-#### Folder Structure
+A metadata CSV mapping:
 
 ```
-/path/to/embeddings/
-├── UNI/
-│   ├── tile_001.pt
-│   ├── tile_002.pt
-│   └── ...
-├── Virchow/
-│   ├── tile_001.pt
-│   ├── tile_002.pt
-│   └── ...
-└── ...
+slide_id, label, group_id, etc.
 ```
 
-Each `.pt` file should contain a single **1D PyTorch tensor** representing the feature embedding.
+* `slide_id` must match folder names under your embedding root.
+* `label` is the target class.
+* `group_id` ensures patient-level grouping for Group K fold cross-validation.
+
+### **2. Embedding root (`emb_root`)**
+
+Structure:
+
+```
+emb_root/
+    ├── UNI/
+    │     ├── slide_001/
+    │     │       ├── tile_0001.pt
+    │     │       └── ...
+    ├── Virchow/
+    └── Hibou-L/
+```
+
+### **3. Output directory (`out_dir`)**
+
+Location where probe results (CSVs, plots, logs) will be saved.
 
 ---
 
-### Command-Line Arguments
+## 2. Example Script to Run Linear & kNN Probing
 
-| Argument      | Type        | Description                                                                             |
-| ------------- | ----------- | --------------------------------------------------------------------------------------- |
-| `--csv_file`  | `str`       | Path to the CSV file containing columns: `ID`, `Group_ID`, `class`.                     |
-| `--emb_dir`   | `str`       | Root directory containing per-model embedding folders (e.g., UNI, Virchow, etc.).       |
-| `--out_dir`   | `str`       | Directory where result CSVs will be saved.                                              |
-| `--models`    | `list[str]` | (Optional) Space-separated list of model names to evaluate. Default: all supported FMs. |
-| `--splits`    | `int`       | Number of StratifiedGroupKFold splits (default: `5`).                                   |
-| `--seeds`     | `list[int]` | Random seeds for reproducibility (default: `[0, 1, 2]`).                                |
-| `--bootstrap` | `int`       | Number of bootstrap replicates for confidence interval estimation (default: `1000`).    |
+Create a script (e.g., `run_probes.py`) and insert:
 
----
+```python
+from src.kidney_hfm_eval.Probing.linear_probing import run_linear_probe
+from src.kidney_hfm_eval.Probing.kNN_probing import run_kNN_probe
 
-### Output Files (per model)
+# Paths
+csv_file = "/path/to/metadata.csv"        # Contains slide_id, label, group info
+emb_root = "/path/to/embeddings"          # Root folder containing model subfolders
+out_dir  = "/path/to/output"             # Results will be saved here
 
-Each evaluated model produces **three output files** under the specified `--out_dir`.
+# Models to evaluate
+selected_models = [
+    "UNI", "UNI2-h", "Virchow", "Virchow2",
+    "SP22M", "SP85M", "H-optimus-0", "H-optimus-1",
+    "Prov-Gigapath", "Hibou-B", "Hibou-L"
+]
 
-| File                                  | Description                              |
-| ------------------------------------- | ---------------------------------------- |
-| `cv_results_LR_<model>.csv`           | Per-fold cross-validation metrics.       |
-| `bootstrap_replicates_LR_<model>.csv` | Raw bootstrap metric replicates.         |
-| `bootstrap_CI_LR_<model>.csv`         | Mean and 95% CI summary for each metric. |
+# -----------------------------
+#  Run Linear Probing
+# -----------------------------
+run_linear_probe(
+    csv_file=csv_file,
+    emb_root=emb_root,
+    out_dir=out_dir,
+    models=selected_models,
+    n_splits=5,            # StratifiedGroupKFold = 5 folds
+    seeds=(0, 1, 2),       # Repeated CV across 3 seeds
+    bootstrap=1000         # Bootstrapped confidence intervals
+)
 
-#### Example Output Structure
-
-```
-results/
-├── UNI/
-│   ├── cv_results_LR_UNI.csv
-│   ├── bootstrap_replicates_LR_UNI.csv
-│   └── bootstrap_CI_LR_UNI.csv
-├── Virchow/
-│   ├── cv_results_LR_Virchow.csv
-│   ├── bootstrap_replicates_LR_Virchow.csv
-│   └── bootstrap_CI_LR_Virchow.csv
-└── ...
-
----
-
-### Example Commands
-
-#### Run evaluation for **all foundation models**
-
-```bash
-python linear_probing.py \
-    --csv_file /orange/pinaki.sarder/harishwarreddy.k/Datasets/metadata.csv \
-    --emb_dir /orange/pinaki.sarder/harishwarreddy.k/Validation_FM_Features \
-    --out_dir /orange/pinaki.sarder/harishwarreddy.k/LinearProbing_Results \
-    --splits 5 \
-    --bootstrap 1000
-```
-
-#### Run evaluation for **selected models only**
-
-```bash
-python linear_probing.py \
-    --csv_file /orange/pinaki.sarder/harishwarreddy.k/Datasets/metadata.csv \
-    --emb_dir /orange/pinaki.sarder/harishwarreddy.k/Validation_FM_Features \
-    --out_dir /orange/pinaki.sarder/harishwarreddy.k/LinearProbing_Results \
-    --models UNI Virchow SP22M \
-    --splits 5 \
-    --bootstrap 500
+# -----------------------------
+#  Run kNN Probing
+# -----------------------------
+run_kNN_probe(
+    csv_file=csv_file,
+    emb_root=emb_root,
+    out_dir=out_dir,
+    models=selected_models,
+    n_splits=5,            # same CV setup
+    seeds=(0, 1, 2),
+    bootstrap=1000
+)
 ```
 
 ---
 
-### Metrics Computed
 
-#### **Binary Classification**
+## 4. What the Script Outputs
 
-* Accuracy
-* Balanced Accuracy
-* Matthews Correlation Coefficient (MCC)
-* F1, Precision, Recall, Specificity
-* AUROC, AUPRC
-
-#### **Multiclass (Macro-Averaged)**
-
-* F1_macro, Precision_macro, Recall_macro
-* Specificity_macro
-* AUROC_macro, AUPRC_macro
-
-Each metric includes **mean estimates** and **95% confidence intervals** from bootstrapping.
-
----
-
-### Notes
-
-* Designed to evaluate embeddings extracted using [`Extract_FE_modularized.py`](#-feature-extraction--extract_fe_modularizedpy).
-* Fully **deterministic and reproducible**: random seeds are fixed and `torch.use_deterministic_algorithms(True)` is enabled.
-* Handles missing `.pt` files gracefully with warnings.
-* Uses **StratifiedGroupKFold** to prevent leakage between slides or patients.
-* Logistic regression regularization parameter ( C ) is defined as:
-  [
-  C = \frac{1}{(100 / (M \times C_{\text{classes}}))}
-  ]
-  where *M* is the number of features and *C_classes* is the number of unique class labels.
-
----
-## kNN Probing — `kNN_probing.py`
-
-### Overview
-
-`kNN_probing.py` evaluates **foundation model (FM) embeddings** using a **non-parametric k-Nearest Neighbors classifier**.
-It measures how well the extracted embeddings cluster by class — i.e., how “semantically separable” the representation space is — **without training a classifier**.
-
-This is a complementary analysis to linear probing, providing insight into **representation quality** and **class neighborhood structure**.
-
-The script performs:
-
-* **Stratified Group K-Fold cross-validation** (to prevent leakage between related samples).
-* Evaluation using kNN (default `k=20`) on standardized embeddings.
-* Computation of comprehensive metrics (Accuracy, MCC, AUROC, etc.).
-* **Bootstrap resampling** for 95% confidence intervals.
-* Automatic per-model reporting in CSV format.
-
----
-
-### Expected CSV File Structure
-
-Your input CSV must include **three required columns**:
-
-| Column     | Description                                                                 | Example                           |
-| ---------- | --------------------------------------------------------------------------- | --------------------------------- |
-| `ID`       | Image filename corresponding to the embedding `.pt` file.                   | `tile_001.png`                    |
-| `Group_ID` | Group identifier (e.g., slide ID, patient ID) used for stratified grouping. | `Slide_A`                         |
-| `class`    | Class label (integer or string).                                            | `0` / `1` / `abnormal` / `normal` |
-
-#### Example `metadata.csv`
-
-```csv
-ID,Group_ID,class
-tile_001.png,Slide_A,0
-tile_002.png,Slide_A,1
-tile_003.png,Slide_B,0
-tile_004.png,Slide_B,1
-```
-
-#### Folder Structure
+Each model gets its own subfolder:
 
 ```
-/path/to/embeddings/
-├── UNI/
-│   ├── tile_001.pt
-│   ├── tile_002.pt
-│   └── ...
-├── Virchow/
-│   ├── tile_001.pt
-│   ├── tile_002.pt
-│   └── ...
-└── ...
+out_dir/
+    ├── UNI/
+    │     ├── bootstrap_CI_LR_Virchow2.csv
+    │     ├── bootstrap_CI_kNN_Virchow2.csv
+    │     ├── bootstrap_replicates_kNN_Virchow2.csv
+    │     ├── bootstrap_replicates_LR_Virchow2.csv
+    │     ├── cv_results_kNN_Virchow2.csv
+    │     └── cv_results_LR_Virchow2.csv
+    ├── UNI2-h/
+    ├── Virchow/
+    └── ...
 ```
 
-Each `.pt` file contains a **1D PyTorch tensor** (embedding vector) for the corresponding image.
+Each probe automatically produces:
+
+* Accuracy, balanced accuracy, F1, MCC, AUROC, AUPRC
+* CV means + std
+* Bootstrap confidence intervals (95%)
 
 ---
 
-### Command-Line Arguments
+## 5. Key Parameters
 
-| Argument      | Type        | Description                                                                     |
-| ------------- | ----------- | ------------------------------------------------------------------------------- |
-| `--csv_file`  | `str`       | Path to CSV with columns `ID`, `Group_ID`, `class`.                             |
-| `--emb_dir`   | `str`       | Directory containing per-model embedding subfolders (e.g., UNI, Virchow, etc.). |
-| `--out_dir`   | `str`       | Directory where output CSVs will be stored.                                     |
-| `--models`    | `list[str]` | Optional list of FMs to run. Default: all available models.                     |
-| `--splits`    | `int`       | Number of StratifiedGroupKFold splits (default: `5`).                           |
-| `--seeds`     | `list[int]` | Random seeds for reproducibility (default: `[0, 1, 2]`).                        |
-| `--bootstrap` | `int`       | Number of bootstrap iterations (default: `1000`).                               |
-
----
-
-### Output Files (per model)
-
-Each evaluated foundation model produces **three CSV files** inside the specified `--out_dir`.
-
-| File                                   | Description                                                           |
-| -------------------------------------- | --------------------------------------------------------------------- |
-| `cv_results_kNN_<model>.csv`           | Metrics from each cross-validation fold.                              |
-| `bootstrap_replicates_kNN_<model>.csv` | Raw metrics from all bootstrap runs.                                  |
-| `bootstrap_CI_kNN_<model>.csv`         | Summary table with mean and 95% confidence intervals for each metric. |
-
-#### Example Output Directory
-
-```
-results/
-├── UNI/
-│   ├── cv_results_kNN_UNI.csv
-│   ├── bootstrap_replicates_kNN_UNI.csv
-│   └── bootstrap_CI_kNN_UNI.csv
-├── Virchow/
-│   ├── cv_results_kNN_Virchow.csv
-│   ├── bootstrap_replicates_kNN_Virchow.csv
-│   └── bootstrap_CI_kNN_Virchow.csv
-└── ...
-```
-
----
-
-### Example Commands
-
-#### Run kNN probing for **all foundation models**
-
-```bash
-python kNN_probing.py \
-    --csv_file /orange/pinaki.sarder/harishwarreddy.k/Datasets/metadata.csv \
-    --emb_dir /orange/pinaki.sarder/harishwarreddy.k/Validation_FM_Features \
-    --out_dir /orange/pinaki.sarder/harishwarreddy.k/kNN_Results \
-    --splits 5 \
-    --bootstrap 1000
-```
-
-#### Run kNN probing for **specific models only**
-
-```bash
-python kNN_probing.py \
-    --csv_file /orange/pinaki.sarder/harishwarreddy.k/Datasets/metadata.csv \
-    --emb_dir /orange/pinaki.sarder/harishwarreddy.k/Validation_FM_Features \
-    --out_dir /orange/pinaki.sarder/harishwarreddy.k/kNN_Results \
-    --models UNI Virchow SP22M \
-    --splits 5 \
-    --bootstrap 500
-```
-
----
-
-### Metrics Computed
-
-#### **Binary Classification**
-
-* Accuracy
-* Balanced Accuracy
-* Matthews Correlation Coefficient (MCC)
-* F1, Precision, Recall, Specificity
-* AUROC, AUPRC
-
-#### **Multiclass (Macro-Averaged)**
-
-* F1_macro, Precision_macro, Recall_macro
-* Specificity_macro
-* AUROC_macro, AUPRC_macro
-
-Each metric includes **mean estimates** and **bootstrap-derived 95% confidence intervals**.
-
----
-
-### Algorithm Details
-
-* Uses **k-Nearest Neighbors (kNN)** classifier (`n_neighbors=20`) with standardized embeddings.
-* Each fold performs **feature standardization (Z-score normalization)** via `StandardScaler`.
-* If any class is missing in a fold, probability vectors are **zero-padded** to preserve output shape.
-* Ensures **deterministic execution** with fixed seeds and `torch.use_deterministic_algorithms(True)`.
-* Bootstrap CI computed using **group-level resampling** to account for correlated samples.
-
----
-
-### Notes
-
-* Designed to evaluate embeddings generated via [`Extract_FE_modularized.py`](#-feature-extraction--extract_fe_modularizedpy).
-* The kNN probing analysis helps quantify **clustering strength** and **representation smoothness** of embeddings.
-* Larger gaps between linear and kNN accuracy indicate **non-linear class separation** in embedding space.
-* You can modify `n_neighbors` in `evaluate_knn()` (default: `20`) for sensitivity analysis.
+| Parameter        | Meaning                                              |
+| ---------------- | ---------------------------------------------------- |
+| `n_splits=5`     | Number of folds in StratifiedGroupKFold              |
+| `seeds=(0,1,2)`  | Repeat probing for stability                         |
+| `bootstrap=1000` | Resample predictions to compute confidence intervals |
+| `models=[...]`   | Subset of HFMs to evaluate                           |
 
 ---
 
 ## Ridge Regression — `linear_regression.py`
 
-### Overview
+---
 
-`linear_regression.py` performs **ridge regression–based evaluation** on foundation model (FM) embeddings to assess their predictive power for **continuous or multi-output targets** (e.g., cell type proportions, molecular scores, or morphometric features).
+# Regression Probing on HFM Embeddings
 
-It uses **grouped cross-validation** and **bootstrap confidence intervals** to provide robust regression performance estimates.
-This complements linear and kNN probing, extending the evaluation to **quantitative prediction tasks**.
+Regression probing evaluates how well frozen foundation-model embeddings encode continuous biological or clinical variables, such as:
 
-The pipeline includes:
+* Cell-type proportions
+* eGFR, proteinuria, or other renal function metrics
+* Morphometric measurements
+* Quantitative pathology features
 
-* Group-aware K-fold regression using `Ridge` from scikit-learn
-* Metrics such as R², MAE, RMSE, MAPE, and mean Pearson correlation
-* Bootstrap resampling to estimate 95% confidence intervals
-* Automatic aggregation of results per foundation model
+The regression probe uses ridge regression (SVD-based solver) along with nested cross-validation and bootstrapped confidence intervals.
 
 ---
 
-### Expected CSV File Structure
+## 1. Inputs Required
 
-Your CSV file must contain **two required columns**:
+### **1. Label root (`label_root`)**
 
-| Column     | Description                                                                                                  | Example            |
-| ---------- | ------------------------------------------------------------------------------------------------------------ | ------------------ |
-| `ID`       | Embedding filename (without or with extension). Must match `.pt` files in the embeddings and labels folders. | `Slide01_0001.png` |
-| `Group_ID` | Group identifier (e.g., slide ID, patient ID). Used for grouped cross-validation.                            | `Slide01`          |
+A directory containing `.pt` files of continuous labels:
 
-#### Example `metadata.csv`
+```
+label_root/
+    ├── slide_001.pt      # tensor of continuous label(s)
+    ├── slide_002.pt
+    └── ...
+```
 
-```csv
-ID,Group_ID
-Slide01_0001.png,Slide01
-Slide01_0002.png,Slide01
-Slide02_0001.png,Slide02
-Slide02_0002.png,Slide02
+### **2. Embedding root (`emb_root`)**
+
+Directory containing embeddings extracted for each foundation model:
+
+```
+emb_root/
+    ├── UNI/
+    │     ├── slide_001/
+    │     │      ├── tile_0001.pt
+    │     │      └── ...
+    ├── Virchow/
+    └── Hibou-L/
+```
+
+### **3. Metadata CSV (`csv_file`)**
+
+A table mapping `slide_id` → metadata, including:
+
+```
+slide_id, group_id, etc.
+```
+
+This ensures slide-level grouping for regression CV.
+
+### **4. Output directory (`out_dir`)**
+
+Where regression results will be saved.
+
+---
+
+## 2. Example Script to Run Regression Probing
+
+Create a script named `run_regression.py`:
+
+```python
+from src.kidney_hfm_eval.Regression.linear_regression import run_regression_probe
+
+# Paths (update these)
+emb_root = "/path/to/embeddings"
+label_root = "/path/to/labels"
+csv_file = "/path/to/metadata.csv"
+out_dir = "/path/to/output"
+
+# Foundation models to evaluate
+selected_models = [
+    "UNI", "UNI2-h", "Virchow", "Virchow2",
+    "SP22M", "SP85M", "H-optimus-0", "H-optimus-1",
+    "Prov-Gigapath", "Hibou-B", "Hibou-L"
+]
+
+# -----------------------------
+# Run Regression Probing
+# -----------------------------
+run_regression_probe(
+    emb_root=emb_root,
+    label_root=label_root,
+    csv_file=csv_file,
+    out_dir=out_dir,
+    models=selected_models,     # evaluate all selected models
+    n_splits=5,                 # StratifiedGroupKFold (5 folds)
+    seeds=(0, 1, 2),            # multiple CV seeds for robustness
+    bootstrap_iters=1000        # bootstrapped CIs for regression metrics
+)
 ```
 
 ---
 
-### Folder Structure
-
-#### Input directories:
-
-```
-/path/to/embeddings/
-├── UNI/
-│   ├── Slide01_0001.pt
-│   ├── Slide01_0002.pt
-│   └── ...
-├── Virchow/
-│   ├── Slide02_0001.pt
-│   ├── Slide02_0002.pt
-│   └── ...
-└── ...
-
-/path/to/labels/
-├── Slide01_0001.pt
-├── Slide01_0002.pt
-├── Slide02_0001.pt
-└── Slide02_0002.pt
-```
-
-Each embedding (`.pt`) file should contain a **1D feature vector** (from a foundation model).
-Each corresponding label (`.pt`) file should contain a **vector of continuous values** — e.g., predicted cell type proportions or regression targets.
-
----
-
-### Command-Line Arguments
-
-| Argument            | Type        | Description                                                                       |
-| ------------------- | ----------- | --------------------------------------------------------------------------------- |
-| `--embeddings_dir`  | `str`       | Root directory containing per-model embedding folders (e.g., UNI, Virchow, etc.). |
-| `--labels_dir`      | `str`       | Directory containing label `.pt` files with the same filenames as embeddings.     |
-| `--csv_path`        | `str`       | CSV file containing columns `ID` and `Group_ID`.                                  |
-| `--models`          | `list[str]` | (Optional) Foundation models to evaluate. Default: all available FMs.             |
-| `--n_splits`        | `int`       | Number of cross-validation folds (default: `5`).                                  |
-| `--seeds`           | `list[int]` | Random seeds for cross-validation (default: `[0, 1, 2]`).                         |
-| `--bootstrap_iters` | `int`       | Number of bootstrap replicates for confidence intervals (default: `1000`).        |
-| `--output_dir`      | `str`       | Directory to save regression results (default: `results_regression`).             |
-
----
-
-### Output Files (per model)
-
-Each evaluated foundation model produces **three CSV outputs** under the specified output directory.
-
-| File                                          | Description                                         |
-| --------------------------------------------- | --------------------------------------------------- |
-| `regression_cv_results_<model>.csv`           | Cross-validation metrics (one row per fold).        |
-| `regression_bootstrap_replicates_<model>.csv` | Raw bootstrap metrics for all iterations.           |
-| `regression_bootstrap_CI_<model>.csv`         | Mean and 95% CI summary for each regression metric. |
-
-#### Example Output Directory
-
-```
-results_regression/
-├── UNI/
-│   ├── regression_cv_results_UNI.csv
-│   ├── regression_bootstrap_replicates_UNI.csv
-│   └── regression_bootstrap_CI_UNI.csv
-├── Virchow/
-│   ├── regression_cv_results_Virchow.csv
-│   ├── regression_bootstrap_replicates_Virchow.csv
-│   └── regression_bootstrap_CI_Virchow.csv
-└── ...
-```
-
----
-
-### Example Commands
-
-#### Run regression for **all foundation models**
+## 3. Run the Script
 
 ```bash
-python linear_regression.py \
-    --embeddings_dir /orange/pinaki.sarder/harishwarreddy.k/Validation_FM_Features \
-    --labels_dir /orange/pinaki.sarder/harishwarreddy.k/CellType_Proportions \
-    --csv_path /orange/pinaki.sarder/harishwarreddy.k/Datasets/metadata.csv \
-    --output_dir /orange/pinaki.sarder/harishwarreddy.k/Regression_Results \
-    --n_splits 5 \
-    --bootstrap_iters 1000
-```
-
-#### Run regression for **specific models only**
-
-```bash
-python linear_regression.py \
-    --embeddings_dir /orange/pinaki.sarder/harishwarreddy.k/Validation_FM_Features \
-    --labels_dir /orange/pinaki.sarder/harishwarreddy.k/CellType_Proportions \
-    --csv_path /orange/pinaki.sarder/harishwarreddy.k/Datasets/metadata.csv \
-    --models UNI Virchow SP22M \
-    --output_dir /orange/pinaki.sarder/harishwarreddy.k/Regression_Results \
-    --n_splits 5 \
-    --bootstrap_iters 500
+python run_regression.py
 ```
 
 ---
 
-### Metrics Computed
+## 4. Outputs Generated
 
-| Metric             | Description                                                             |
-| ------------------ | ----------------------------------------------------------------------- |
-| **R²**             | Coefficient of determination (variance explained).                      |
-| **MAE**            | Mean Absolute Error — average magnitude of prediction error.            |
-| **RMSE**           | Root Mean Squared Error — penalizes large deviations.                   |
-| **MAPE**           | Mean Absolute Percentage Error (robust to scale differences).           |
-| **Mean Pearson r** | Mean column-wise Pearson correlation between predicted and true values. |
+Each model will receive its own result directory:
 
-Each metric includes **mean estimates** across folds and **bootstrap 95% confidence intervals**.
+```
+out_dir/
+    ├── UNI/
+    │     ├── regression_metrics.csv
+    │     ├── bootstrap_statistics.csv
+    │     ├── predictions_fold0.csv
+    │     ├── predictions_fold1.csv
+    │     ├── plots/
+    │     │     ├── scatter_pred_vs_true.png
+    │     │     ├── violin_r2.png
+    │     │     └── ...
+    │     └── logs/
+    ├── Virchow/
+    └── Hibou-L/
+```
+
+You get:
+
+* Mean ± SD of **R²**, **RMSE**, **MAE**, **Pearson r**, **Spearman ρ**
+* Bootstrapped CIs for all metrics
+* Per-fold predictions
+* Scatter plots + distributions
+* Reproducible logs
 
 ---
 
-### Algorithm Details
+## 5. Important Parameters
 
-* Uses **Ridge Regression** (`α=1.0`) for stable coefficient estimation.
-* Performs **Z-score normalization** on embeddings before training.
-* Splits data with **GroupShuffleSplit** to prevent leakage between related groups (e.g., same slide/patient).
-* Computes **multi-output regression metrics** across all targets.
-* Applies **bootstrap resampling** at the sample level to compute confidence intervals.
-
----
-
-### Notes
-
-* Designed for embeddings produced by [`Extract_FE_modularized.py`](#-feature-extraction--extract_fe_modularizedpy).
-* Can be used for regression tasks like **predicting cell type proportions**, **molecular markers**, or **histological scores**.
-* Embedding and label files must share the same `.pt` filename base.
-* Outputs can be used to compare model predictive strength across FMs and stains.
+| Parameter              | Description                            |
+| ---------------------- | -------------------------------------- |
+| `n_splits=5`           | CV folds (StratifiedGroupKFold)        |
+| `seeds=(0,1,2)`        | Repeat CV for stability                |
+| `bootstrap_iters=1000` | Bootstrapped confidence intervals      |
+| `label_root`           | Directory containing continuous labels |
+| `emb_root`             | Directory containing model embeddings  |
 
 ---
 
@@ -737,16 +519,16 @@ Each metric includes **mean estimates** across folds and **bootstrap 95% confide
 
 ### Overview
 
-`copy_detection.py` evaluates the **robustness and consistency** of foundation model (FM) embeddings when subjected to various image augmentations (e.g., geometric, color, noise, deformation).
-It does this by computing **Top-K retrieval accuracy** — i.e., whether each original image’s embedding correctly identifies its augmented counterpart among all others.
+`copy_detection.py` evaluates the robustness and consistency of HFM embeddings when subjected to various image augmentations (e.g., geometric, color, noise, deformation).
+It does this by computing Top-K retrieval accuracy — i.e., whether each original image’s embedding correctly identifies its augmented counterpart among all others.
 
-This task quantifies **representation stability** — a crucial property for models expected to produce invariant embeddings across domain shifts, stain variations, or transformations.
+This task quantifies representation stability — a crucial property for models expected to produce invariant embeddings across domain shifts, stain variations, or transformations.
 
 ---
 
 ### Folder Structure
 
-Your base directory should have **one subfolder per model**, each containing:
+Your base directory should have one subfolder per model, each containing:
 
 ```
 /path/to/Copy_detection/
@@ -771,7 +553,7 @@ Your base directory should have **one subfolder per model**, each containing:
 └── ...
 ```
 
-Each `.pt` file must contain a **1D PyTorch tensor** — the embedding vector corresponding to an original or augmented image.
+Each `.pt` file must contain a 1D PyTorch tensor — the embedding vector corresponding to an original or augmented image.
 
 ---
 
@@ -791,10 +573,8 @@ For every foundation model and augmentation type, the script computes **Top-K re
 | Metric             | Meaning                                                                     |
 | ------------------ | --------------------------------------------------------------------------- |
 | **Top-1 Accuracy** | Fraction of images where the exact augmented pair ranks 1st in similarity.  |
-| **Top-3 Accuracy** | Fraction where the augmented pair appears among top-3 most similar samples. |
-| **Top-5 Accuracy** | Fraction where the augmented pair appears among top-5 most similar samples. |
 
-Higher values indicate that the model produces **stable, augmentation-invariant embeddings**.
+Higher values indicate that the model produces stable, augmentation-invariant embeddings.
 
 ---
 
@@ -813,17 +593,6 @@ This will automatically:
 * Iterate over each model subfolder (e.g., `UNI`, `Virchow`, `SP22M`, etc.)
 * Compute Top-1/3/5 accuracies for all augmentation types under `aug_images/`
 * Save a summary CSV report with results.
-
----
-
-### Example Output CSV
-
-| model   | augmentation | top1_accuracy | top3_accuracy | top5_accuracy |
-| :------ | :----------- | :------------ | :------------ | :------------ |
-| UNI     | geo          | 0.98          | 0.99          | 1.00          |
-| UNI     | color        | 0.92          | 0.96          | 0.98          |
-| Virchow | noise        | 0.87          | 0.93          | 0.95          |
-| SP22M   | deform       | 0.90          | 0.95          | 0.97          |
 
 ---
 
@@ -854,7 +623,7 @@ This will automatically:
 
 ### Notes
 
-* Embedding filenames in `images/` and each `aug_images/<type>/` folder **must match exactly** (e.g., `tile_001.pt` ↔ `tile_001.pt`).
+* Embedding filenames in `images/` and each `aug_images/<type>/` folder must match exactly (e.g., `tile_001.pt` ↔ `tile_001.pt`).
 * The script automatically validates filename consistency and reports missing pairs.
 * Designed for evaluating FM embeddings produced via [`Extract_FE_modularized.py`](#-feature-extraction--extract_fe_modularizedpy).
 * Useful for comparing invariance of different models (e.g., UNI vs Virchow vs Hibou).
@@ -869,5 +638,513 @@ This will automatically:
 | **High Top-1 accuracy**               | Model is strongly invariant to augmentations; embeddings are almost identical post-transform. |
 | **Large gap between Top-1 and Top-5** | Minor distortions or moderate sensitivity to augmentation noise.                              |
 | **Low Top-K across augmentations**    | Embeddings change significantly — model less robust to stain/augmentation shifts.             |
+
+---
+
+# ABMIL Preprocessing Pipeline
+
+Before training ABMIL models, your data must go through two preprocessing steps:
+
+1. Generate random K-fold splits for slide-level cross-validation
+2. Pack tile embeddings into `.npy` files for efficient MIL training
+
+This section describes how to run both steps.
+
+---
+
+## Generate Random K-Fold Splits
+
+The first step prepares cross-validation folds using slide-level metadata.
+This ensures balanced folds, and reproducible seeds.
+
+### **Input Requirements**
+
+Your CSV (`csv_path`) must include:
+
+```
+slide_id, group_id, label
+```
+
+* `slide_id`: unique slide name
+* `group_id`: patient-level grouping (ensures no leakage)
+* `label`: class label
+
+### **Example Script**
+
+Create `make_folds.py`:
+
+```python
+from src.kidney_hfm_eval.MIL_preprocessing.make_random_folds import generate_random_folds
+
+generate_random_folds(
+    csv_path="/path/to/metadata.csv",
+    seeds=[0, 1, 2],    # reproducible 3-seed split generation
+    n_splits=5,         # 5-fold StratifiedGroupKFold
+    out_path="/path/to/output/folds.json"
+)
+```
+
+### **Output**
+
+A JSON file containing 3×5 folds (one set per seed):
+
+```
+folds.json
+{
+    "seed_0": {
+        "fold_0": [...],
+        "fold_1": [...],
+        ...
+    },
+    "seed_1": {...},
+    "seed_2": {...}
+}
+```
+
+This is used by **all ABMIL training scripts**.
+
+---
+
+## Pack Embeddings for ABMIL Training
+
+Tile embeddings extracted earlier (one `.pt` file per tile) are typically slow to load individually.
+To train MIL models efficiently, pack all tiles belonging to each slide into a single `.npy` array.
+
+This step also writes:
+
+* A manifest JSON describing file paths
+* A summary JSON containing tile counts, shapes, and embedding stats
+
+### **Required Directory Structure**
+
+```
+/root_dir/
+    ├── UNI/
+    │     ├── slide_001/
+    │     │      ├── tile_0001.pt
+    │     │      ├── tile_0002.pt
+    ├── Virchow/
+    └── Hibou-L/
+```
+
+### **List of Supported Foundation Models**
+
+```python
+selected_models = [
+    "UNI", "UNI2-h", "Virchow", "Virchow2",
+    "SP22M", "SP85M", "H-optimus-0", "H-optimus-1",
+    "Hibou-B", "Hibou-L", "Prov-Gigapath"
+]
+```
+
+---
+
+## **Example Script: Pack Embeddings for All Models**
+
+Create a script `pack_embeddings.py`:
+
+```python
+from src.kidney_hfm_eval.MIL_preprocessing.pack_embeddings import pack_all_patients
+
+selected_models = [
+    "UNI", "UNI2-h", "Virchow", "Virchow2",
+    "SP22M", "SP85M", "H-optimus-0", "H-optimus-1",
+    "Hibou-B", "Hibou-L", "Prov-Gigapath"
+]
+
+# Base paths
+ROOT_DIR = "/path/to/embeddings"
+OUT_DIR  = "/path/to/packed_embeddings"
+MANIFEST_DIR = "/path/to/manifests"
+SUMMARY_DIR  = "/path/to/summaries"
+
+for fm in selected_models:
+    pack_all_patients(
+        root_dir     = f"{ROOT_DIR}/{fm}", 
+        out_root     = f"{OUT_DIR}/{fm}", 
+        manifest_name= f"{MANIFEST_DIR}/{fm}_manifest.json",
+        summary_name = f"{SUMMARY_DIR}/{fm}_summary.json"
+    )
+```
+
+---
+
+## Output Structure
+
+After packing, each model will have:
+
+```
+OUT_DIR/UNI/
+    ├── slide_001.npy
+    ├── slide_002.npy
+    └── ...
+
+MANIFEST_DIR/UNI_manifest.json
+SUMMARY_DIR/UNI_summary.json
+```
+
+### **Manifest JSON**
+
+Maps each slide to its `.npy` file.
+
+### **Summary JSON**
+
+Contains:
+
+* number of tiles
+* embedding dimensionality
+* min/max statistics
+* shape per slide
+
+---
+
+## Ready for ABMIL Training
+
+Once the preprocessing steps are complete, you can run:
+
+* MIL classification
+* MIL regression
+* Nested CV tuning
+* Seed-averaged model evaluation
+
+All MIL scripts accept:
+
+* `folds.json`
+* packed embeddings (`.npy`)
+* manifests
+* summary files
+
+---
+
+# ABMIL Classification Pipeline
+
+This module trains Attention-Based Multiple Instance Learning (ABMIL) models on packed slide-level embeddings produced earlier.
+The pipeline performs:
+
+* Nested cross-validation (outer folds × inner folds)
+* Hyperparameter tuning (`lr`, `M`, `L`, etc.)
+* Bootstrap-based uncertainty estimation
+* Multi-seed training for robustness
+* Evaluation across all selected foundation models
+
+This is the main pipeline used for slide-level classification benchmarking.
+
+---
+
+## 1. Required Inputs
+
+### **1. Packed Embeddings (`root_dir`)**
+
+A directory containing `.npy` files per slide:
+
+```
+root_dir/
+    ├── UNI/
+    │     ├── slide_001.npy
+    │     ├── slide_002.npy
+    ├── Virchow/
+    └── Hibou-L/
+```
+
+### **2. Metadata CSV (`csv_path`)**
+
+Contains:
+
+```
+slide_id, label, ...
+```
+
+Used to map slides to labels and patient groups.
+
+### **3. Generated Folds (`outer_fold`)**
+
+The folds JSON produced by:
+
+```python
+generate_random_folds(...)
+```
+
+Example:
+
+```
+folds.json
+{
+  "seed_0": {
+      "fold_0": { "train": [...], "val": [...] },
+      ...
+  }
+}
+```
+
+### **4. Log file path**
+
+Where training logs for each model will be saved.
+
+---
+
+## 2. Example Script for ABMIL Classification
+
+Create a script named `run_mil_classification.py`:
+
+```python
+from src.kidney_hfm_eval.ABMIL_classification.mil_classification import run_mil_pipeline
+
+args = {
+    "root_dir": "/path/to/packed_embeddings",
+    "csv_path": "/path/to/metadata.csv",
+    "outer_fold": "/path/to/folds.json",
+    "log_file_path": "/path/to/training_logs.txt",
+
+    # Hyperparameters to tune
+    "tune_params": "lr,M,L",
+
+    # Training configuration
+    "epochs": 50,
+    "patience": 20,
+    "k_folds": 5,       # outer folds
+    "inner_folds": 4,   # nested CV inside each outer fold
+    "batch_size": 1,
+
+    # Reproducibility
+    "seed": 0,
+    "num_seeds": 3,     # train each model with seeds {0,1,2}
+
+    # Uncertainty estimation
+    "bootstrap": 1000,
+
+    # Foundation models to evaluate
+    "models": [
+        "UNI", "UNI2-h", "Virchow", "Virchow2",
+        "SP22M", "SP85M", "H-optimus-0", "H-optimus-1",
+        "Hibou-B", "Hibou-L", "Prov-Gigapath"
+    ],
+}
+
+# Run ABMIL pipeline
+run_mil_pipeline(args)
+```
+
+---
+
+## 3. Run the Script
+
+```bash
+python run_mil_classification.py
+```
+
+---
+
+## 4. Output Structure
+
+For each HFM, you will get:
+
+```
+results/
+    ├── UNI/
+    │     ├── bootstrap_CI_MIL_UNI.csv
+    │     ├── bootstrap_replicates_MIL_UNI.csv
+    │     ├── cv_results_MIL_UNI.csv
+    │     ├── training_log_UNI.csv
+    ├── Virchow/
+    └── Hibou-L/
+```
+
+Contains:
+
+* Per-fold metrics
+* Best hyperparameters for each outer fold
+* Training/validation curves
+* Bootstrapped MC estimates
+* Classification reports
+* Confusion matrices
+* Final seed-averaged summary metrics
+
+---
+
+## 5. Key Parameters
+
+| Parameter              | Description                         |
+| ---------------------- | ----------------------------------- |
+| `tune_params="lr,M,L"` | Parameters explored in inner CV     |
+| `epochs=50`            | Maximum training epochs             |
+| `patience=20`          | Early stopping                      |
+| `num_seeds=3`          | Seed averaging (robustness)         |
+| `bootstrap=1000`       | Confidence intervals                |
+| `outer_fold`           | JSON with predefined folds          |
+| `models`               | Foundation models to train ABMIL on |
+
+---
+
+# Statistical Analysis: Model Performance Comparison
+
+This module performs formal statistical comparison across all HFMs using the bootstrap replicate files produced from:
+
+* Linear Probing
+* kNN Probing
+* ABMIL Classification
+* ABMIL Regression
+
+It implements:
+
+* Pairwise model comparison
+* Holm-corrected significance testing
+* Compact Letter Display (CLD) grouping
+* Violin/box plots
+* Ranking heatmaps
+* Summary tables for each classifier × metric
+
+This is the final stage of the entire benchmarking pipeline.
+
+---
+
+## 1. Input Requirements
+
+Each probing or MIL pipeline produces bootstrap replicate CSVs like:
+
+```
+/path/to/results/
+    UNI/
+        bootstrap_replicates_LR_mcc.csv
+        bootstrap_replicates_kNN_auroc.csv
+        ...
+    Virchow/
+    Hibou-L/
+```
+
+Pattern:
+
+```
+bootstrap_replicates_{CLASSIFIER}_{METRIC}.csv
+```
+
+These contain 1,000 bootstrap samples per model per metric.
+
+---
+
+## 2. Example Script to Run Statistical Comparison
+
+Create a file `run_statistical_analysis.py`:
+
+```python
+from src.kidney_hfm_eval.Statistical_analysis.model_performance_comparison import run_replicate_pipeline
+
+classifiers = ["LR", "kNN"]                 # OR ["MIL"] or ["LR", "MIL"]
+metrics = ["mcc", "balanced_accuracy", "f1", "auroc", "recall"]  
+# For regression tasks use:
+# metrics = ["pearson_r", "r2", "mae", "rmse", "mape"]
+
+# Base directory containing all model replicate CSVs
+base_dir = "/path/to/probe_or_mil_results"
+
+# List of foundation models to compare
+models = [
+    "UNI", "UNI2-h", "Virchow", "Virchow2",
+    "SP22M", "SP85M", "H-optimus-0", "H-optimus-1",
+    "Prov-Gigapath", "Hibou-B", "Hibou-L"
+]
+
+for clf in classifiers:
+    for metric in metrics:
+        args = {
+            "repl_glob": f"{base_dir}/*/bootstrap_replicates_{clf}_*.csv",
+            "save_dir": f"{base_dir}/Visualization_results/{clf}_{metric.upper()}",
+            "models": models,
+            "alpha": 0.05,
+            "verbose": True,
+            "metric": metric,
+            "tag": clf
+        }
+
+        print(f"\n Running {clf} analysis for metric: {metric.upper()} ...")
+        try:
+            run_replicate_pipeline(args)
+        except FileNotFoundError as e:
+            print(f" Skipping {clf}-{metric}: {e}")
+```
+
+---
+
+## 3. Running the Analysis
+
+```bash
+python run_statistical_analysis.py
+```
+
+---
+
+## 4. Output Structure
+
+Once the pipeline runs, results are saved in:
+
+```
+Visualization_results_new/
+    LR_MCC/
+        violin_plot.png
+        box_plot.png
+        cld_table.csv
+        pvalue_matrix.csv
+        rank_plot.png
+        summary_stats.csv
+    kNN_AUROC/
+    MIL_BALANCED_ACCURACY/
+    ...
+```
+
+Each classifier–metric pair contains:
+
+* CLD groupings (which models are statistically tied)
+* Holm-corrected p-value matrix
+* Ordered rank tables
+* Violin & box plots per model*
+* Model-wise distributions
+
+---
+
+## 5. What the Pipeline Computes
+
+### **Pairwise Model Testing**
+
+* Wilcoxon signed rank tests
+* Holm correction for multiple comparisons
+
+### **Compact Letter Display (CLD)**
+
+A–B–C grouping summarizing significance relationships:
+
+```
+A: UNI, UNI2-h  
+B: Virchow, Virchow2  
+C: Hibou-B, Prov-Gigapath  
+```
+
+### **Ranking Analysis**
+
+Models are sorted based on:
+
+* Mean bootstrap score
+* CLD group
+* Effect sizes
+
+### **Visualization**
+
+Automatically generates:
+
+* Violin & box plots
+* Model ranking bars
+* CLD summary heatmaps
+* Confidence intervals
+
+---
+
+## 6. Key Parameters
+
+| Parameter     | Description                          |
+| ------------- | ------------------------------------ |
+| `classifiers` | LR, kNN, MIL (or combinations)       |
+| `metrics`     | Classification or regression metrics |
+| `repl_glob`   | Pattern to load replicate CSVs       |
+| `alpha=0.05`  | Significance level for testing       |
+| `models`      | Foundation models included           |
+| `save_dir`    | Output directory for plots & tables  |
 
 ---
