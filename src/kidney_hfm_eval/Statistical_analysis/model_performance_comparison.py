@@ -41,34 +41,49 @@ def sort_models_by_cld(cld_map, series_map):
 
 def generate_cld_groups(p_holm, models, alpha=0.05):
     """
-    Convert Holm-corrected p-value matrix into Compact Letter Display (CLD) groups.
+    True Compact Letter Display Groups based on complete-link rule.
+    All models within a group must be mutually NOT significantly different.
     """
-    # Step 1: Identify significant differences
+
+    # Significant differences matrix
     sig = p_holm < alpha
     np.fill_diagonal(sig.values, False)
 
-    # Step 2: Initialize each model as its own group
+    # Start with each model in its own group
     groups = {m: set([m]) for m in models}
 
-    # Step 3: Merge groups if two models are NOT significantly different
+    # Try to merge groups only when fully NSD
     for a, b in combinations(models, 2):
-        if not sig.loc[a, b]:  # not significantly different
-            groups[a].add(b)
-            groups[b].add(a)
+        if not sig.loc[a, b]:  # NSD → candidate for grouping
 
-    # Step 4: Convert sets into group labels (use letters)
+            merged = groups[a] | groups[b]
+
+            # Check every pair in this merged set
+            fully_nsd = True
+            for x, y in combinations(merged, 2):
+                if sig.loc[x, y]:  # any significant → fail
+                    fully_nsd = False
+                    break
+
+            # If valid, merge groups
+            if fully_nsd:
+                for m in merged:
+                    groups[m] = merged
+
+    # Assign group letters based on unique merged sets
     unique_groups = {}
     letter = ord('a')
+    cld_map = {}
 
-    model_to_letter = {}
     for m in models:
         group = tuple(sorted(groups[m]))
         if group not in unique_groups:
             unique_groups[group] = chr(letter)
             letter += 1
-        model_to_letter[m] = unique_groups[group]
+        cld_map[m] = unique_groups[group]
 
-    return model_to_letter
+    return cld_map
+
 def relabel_cld_by_performance(cld_map, series_map):
     """
     Reassign CLD labels so that:
@@ -111,20 +126,6 @@ def plot_box_ungrouped(series_map, models, metric_name="MCC", save_dir=None, suf
     )
 
     plt.figure(figsize=(16, 8))
-    # sns.boxplot(data=df_long, x="Model", y=metric_name, order=models)
-#     sns.boxplot(
-#     data=df_long,
-#     x="Model",             # or "CLD"
-#     y=metric_name,
-#     order=models,
-#     palette=[MODEL_COLORS[m] for m in models],
-#     linewidth=1.8,         # <--- thicker borders
-#     fliersize=3,           # consistent outlier dot size
-#     whiskerprops={"linewidth": 1.6},
-#     capprops={"linewidth": 1.6},
-#     boxprops={"linewidth": 1.8},
-#     medianprops={"linewidth": 2.2, "color": "black"},  # thicker median line
-# )
     ax = sns.boxplot(
         data=df_long,
         x="Model",
@@ -159,23 +160,6 @@ def plot_violin_ungrouped(series_map, models, metric_name="MCC", save_dir=None, 
     )
 
     plt.figure(figsize=(16, 8))
-    # sns.violinplot(
-    #     data=df_long, x="Model", y=metric_name,
-    #     order=models, inner="box", cut=0, density_norm="width"
-    # )
-    # sns.violinplot(
-    #     data=df_long,
-    #     x="Model",             # or "CLD"
-    #     y=metric_name,
-    #     order=models,          # or grouped order
-    #     palette=[MODEL_COLORS[m] for m in models],
-    #     inner="quartile",      # consistent internal structure
-    #     cut=0,
-    #     density_norm="width",  # consistency with seaborn ≥ v0.15
-    #     linewidth=1.5,         # <--- thickness of violin edge
-    #     saturation=1.0,        # consistent color intensity
-    #     alpha=0.9              # soften appearance
-    # )
     ax = sns.violinplot(
         data=df_long,
         x="Model",
@@ -230,11 +214,16 @@ def plot_box_grouped(series_map, models, cld_map, metric_name="MCC",
         medianprops={"linewidth": 2.2, "color": "black"},
     )
 
-    # Add CLD letters above each model
+    # ---- Add CLD letters above each model ----
+    ymin, ymax = ax.get_ylim()
+    ypos = ymax + 0.05 * (ymax - ymin)
+
     for i, m in enumerate(sorted_models):
-        ymax = df_long[df_long["Model"] == m][metric_name].max()
-        ax.text(i, ymax + 0.02, cld_map[m], ha="center",
+        ax.text(i, ypos, cld_map[m], ha="center",
                 fontsize=14, fontweight="bold")
+
+    # ---- Expand y-limit to ensure visibility ----
+    ax.set_ylim(ymin, ymax + 0.10 * (ymax - ymin))
 
     # plt.title(f"{metric_name} – Boxplot Grouped by CLD (Sorted)", fontsize=20)
     plt.title(f"Model Performance with CLD-Based Grouping and Ranking", fontsize=20)
@@ -272,11 +261,16 @@ def plot_violin_grouped(series_map, models, cld_map, metric_name="MCC",
         linewidth=1.5
     )
 
-    # Add CLD letters above each model
+    # ---- Add CLD letters above each model ----
+    ymin, ymax = ax.get_ylim()
+    ypos = ymax + 0.05 * (ymax - ymin)
+
     for i, m in enumerate(sorted_models):
-        ymax = df_long[df_long["Model"] == m][metric_name].max()
-        ax.text(i, ymax + 0.02, cld_map[m], ha="center",
+        ax.text(i, ypos, cld_map[m], ha="center",
                 fontsize=14, fontweight="bold")
+
+    # ---- Expand y-limit to ensure visibility ----
+    ax.set_ylim(ymin, ymax + 0.10 * (ymax - ymin))
 
     # plt.title(f"{metric_name} – Violin Plot Grouped by CLD (Sorted)", fontsize=20)
     plt.title(f"Model Performance with CLD-Based Grouping and Ranking", fontsize=20)
@@ -298,12 +292,15 @@ def make_cld_table(series_map, cld_map, metric="mcc"):
             series.quantile(0.75),
             series.max()
         ])
-
-    return pd.DataFrame(rows, columns=[
+    df = pd.DataFrame(rows, columns=[
         "CLD", "Model",
         "Min", "1st Quart.", "Median", "Mean", "3rd Quart.", "Max"
-    ]).sort_values("Mean", ascending=False)
+    ])
 
+    # Sort by CLD group first, then by mean within each group
+    df = df.sort_values(["CLD", "Mean"], ascending=[True, False]).reset_index(drop=True)
+
+    return df
 
 def ensure_dir(path):
     """Create directory if it doesn't exist."""
@@ -498,41 +495,6 @@ def plot_cld_violin(series_map, models, cld_map, metric_name="MCC", save_dir=Non
     save_plot(save_dir, f"CLD_violin_{metric_name}{suffix}.png")
     plt.show()
 
-# ----------------------------------------------------
-# Main Modular Function
-# ----------------------------------------------------
-# def analyze_replicates(repl_glob, model_order=MODEL_ORDER, save_dir=None):
-#     """
-#     Full analysis pipeline:
-#       - Load replicate CSVs
-#       - Plot summary & violin plots
-#       - Run Friedman + Wilcoxon + Holm correction
-#       - Save all figures and CSVs to save_dir (if provided)
-#     """
-#     print(f"Loading replicate data from pattern:\n  {repl_glob}\n")
-#     series_map, rep_counts = load_replicate_series(repl_glob)
-#     models = [m for m in model_order if m in series_map]
-#     print("Replicates per model:", {m: rep_counts[m] for m in models})
-
-#     if save_dir:
-#         ensure_dir(save_dir)
-
-#     summary_df = make_summary_df(series_map, model_order)
-#     print(summary_df, "\n")
-
-#     # Save summary table
-#     if save_dir:
-#         summary_path = os.path.join(save_dir, "summary_mcc_95CI.csv")
-#         summary_df.to_csv(summary_path)
-#         print(f" Saved summary table: {summary_path}")
-
-#     plot_summary(summary_df, save_dir)
-#     plot_violin(series_map, models, save_dir)
-
-#     df_paired = pd.DataFrame({m: series_map[m] for m in models}).dropna()
-#     print(f"Paired matrix shape: {df_paired.shape}")
-
-#     run_wilcoxon_posthoc(df_paired, models, save_dir=save_dir)
 def run_replicate_pipeline(args: dict):
     """
     Run full replicate analysis using an argument dictionary.
@@ -600,8 +562,16 @@ def run_replicate_pipeline(args: dict):
 
     # --- Step 6: Stats ---
     # run_wilcoxon_posthoc(df_paired, models, alpha=alpha, save_dir=save_dir, suffix=suffix)
+    # friedman_p, p_raw, p_holm = run_wilcoxon_posthoc(df = pd.data
+    #     df_paired, models, alpha=alpha, save_dir=save_dir, suffix=suffix)
     friedman_p, p_raw, p_holm = run_wilcoxon_posthoc(
-        df_paired, models, alpha=alpha, save_dir=save_dir, suffix=suffix)
+        df_paired,
+        models,
+        alpha=alpha,
+        save_dir=save_dir,
+        metric_name=metric.upper(),  # <-- FIXED
+        suffix=suffix
+    )
 
     # -----------------------------
     # Step 7: Compact Letter Display (CLD)
@@ -609,27 +579,27 @@ def run_replicate_pipeline(args: dict):
     cld_map = generate_cld_groups(p_holm.loc[models, models], models, alpha=alpha)
     cld_map = relabel_cld_by_performance(cld_map, series_map)
 
-    print("\nCompact Letter Display groups:")
+    print("\nFinal CLD groups (performance-ranked):")
     for m, g in cld_map.items():
         print(f"  {m}: {g}")
-    # ---- UNGROUPED ----
-    plot_box_ungrouped(series_map, models, metric_name=metric.upper(),
-                       save_dir=save_dir, suffix=suffix)
 
-    plot_violin_ungrouped(series_map, models, metric_name=metric.upper(),
-                          save_dir=save_dir, suffix=suffix)
-
-    # ---- GROUPED ----
-    plot_box_grouped(series_map, models, cld_map, metric_name=metric.upper(),
-                     save_dir=save_dir, suffix=suffix)
-
-    plot_violin_grouped(series_map, models, cld_map, metric_name=metric.upper(),
-                        save_dir=save_dir, suffix=suffix)
-
-    # Save CLD table
+    # --- Save CLD summary table ---
     cld_table = make_cld_table(series_map, cld_map, metric)
     cld_path = os.path.join(save_dir, f"CLD_summary_{metric}{suffix}.csv")
     cld_table.to_csv(cld_path, index=False)
+    print(f" Saved CLD summary table: {cld_path}")
+
+    # --- Generate ALL plots with correct CLD ---
+    plot_box_grouped(series_map, models, cld_map,
+                     metric_name=metric.upper(), save_dir=save_dir, suffix=suffix)
+
+    plot_violin_grouped(series_map, models, cld_map,
+                        metric_name=metric.upper(), save_dir=save_dir, suffix=suffix)
+
+    # CLD letters + raw order (optional)
+    plot_cld_violin(series_map, models, cld_map,
+                    metric_name=metric.upper(), save_dir=save_dir, suffix=suffix)
+
     print(f" Saved CLD summary table: {cld_path}")
     # --- CLD Annotated Plot ---
     plot_cld_violin(series_map, models, cld_map,
