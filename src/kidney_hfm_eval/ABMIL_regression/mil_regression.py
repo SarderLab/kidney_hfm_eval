@@ -76,11 +76,8 @@ def train_fold(train_loader, model, optimizer, criterion, epoch, cuda):
         optimizer.step()
 
         total_loss += loss.item()
-        # probs = F.softmax(logits, dim=1)
-        # pred = torch.argmax(probs, dim=1)
         all_true.append(target.item())
         all_pred.append(preds.detach().cpu().item())
-        # all_prob.append(probs[:,1].item())
 
     avg_loss = total_loss / n_iters
     metrics = calculate_metrics(all_true, all_pred)
@@ -221,12 +218,6 @@ def run_mil_pipeline(args):
         patients = df['ID'].tolist()
         labels   = df['value'].astype(float).tolist()
         # --- Default values from argparse ---
-        # default_params = {
-        #     "dropout": 0.5,
-        #     "weight_decay": 0.04,
-        #     "lr": 5e-4,
-        #     "epochs": args.epochs,
-        # }
         default_params = {
             "dropout": 0.6,
             "weight_decay": 0.01,
@@ -278,6 +269,10 @@ def run_mil_pipeline(args):
         ])
         with open(args.outer_fold, 'r') as f:
             all_fold_indices = json.load(f)
+        num_seeds = len(all_fold_indices)
+        k_folds   = len(next(iter(all_fold_indices.values())))  # assumes all seeds have same #folds
+        fold_counts = [len(v) for v in all_fold_indices.values()]
+        assert len(set(fold_counts)) == 1, "Mismatch in number of folds across seeds"
 
         for seed_str, fold_indices in all_fold_indices.items():
             seed = int(seed_str)
@@ -338,7 +333,7 @@ def run_mil_pipeline(args):
 
                             tr_ld = DataLoader(
                                 tr_ds,
-                                batch_size=args.batch_size,     # 1
+                                batch_size=1,     # 1
                                 shuffle=True,
                                 drop_last=False,
                                 num_workers=4,                  # tune: 4–8 typical
@@ -348,7 +343,7 @@ def run_mil_pipeline(args):
                             )
                             vl_ld = DataLoader(
                                 vl_ds,
-                                batch_size=args.batch_size,
+                                batch_size=1,
                                 num_workers=4,
                                 pin_memory=args.cuda,
                                 persistent_workers=True,worker_init_fn=_seed_worker,
@@ -415,11 +410,11 @@ def run_mil_pipeline(args):
                     fm_root, te_p, te_l, map_location="cpu", max_cache=8
                 )
                 tr_ld = DataLoader(
-                    train_ds, batch_size=args.batch_size, shuffle=True, drop_last=False,
+                    train_ds, batch_size=1, shuffle=True, drop_last=False,
                     num_workers=4, pin_memory=args.cuda, persistent_workers=True, worker_init_fn=_seed_worker,generator=g
                 )
                 te_ld = DataLoader(
-                    te_ds, batch_size=args.batch_size,
+                    te_ds, batch_size=1,
                     num_workers=4, pin_memory=args.cuda, persistent_workers=True, worker_init_fn=_seed_worker,generator=g
                 )
                 vector_size_outer = infer_vector_size_from_dataset(train_ds)
@@ -479,8 +474,8 @@ def run_mil_pipeline(args):
         all_y_ids = np.concatenate(all_y_ids_list)   # shape == (N_images * num_seeds,)
         unique_ids = np.unique(all_y_ids)             
         n = len(all_y_true)
-        print(n, 'n', args.k_folds* args.num_seeds, "folds, seeds")
-        sample_size = n // (args.k_folds* args.num_seeds)   # or choose your own
+        print(n, 'n', k_folds* num_seeds, "folds, seeds")
+        sample_size = n // (k_folds* num_seeds)   # or choose your own
         print(sample_size, "sample_size")
         records = list(zip(all_y_ids, all_y_true, all_y_pred))
         # Group by patient ID
@@ -536,17 +531,10 @@ def main():
     parser.add_argument('--root_dir', required=True, default = "", help="Embeddings folders")
     parser.add_argument('--csv_path', required=True, help="CSV with patient_name + label")
     parser.add_argument('--epochs', type=int, default=50)
-    # parser.add_argument('--lr', type=float, default=0.0005)
-    # parser.add_argument('--lr_end', type=float, default=1e-6)
     parser.add_argument('--weight_decay', type=float, default=0.04)
-    # parser.add_argument('--weight_decay_end', type=float, default=0.4)
-    # parser.add_argument('--warmup_epochs', type=int, default=10)
-    parser.add_argument('--k_folds', type=int, default=5)
     parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--num_seeds', type=int, default=3)
     parser.add_argument('--patience', type=int, default=20, help="Number of epochs with no improvement after which training will be stopped")
-    # parser.add_argument('--tol', type=float, default=0.0001, help="Minimum decrease in loss to qualify as an improvement")
     parser.add_argument('--inner_folds', type=int, default=4)
     parser.add_argument("--bootstrap", type=int, default=1000, help="Number of bootstrap replicates")
     parser.add_argument("--outer_fold", required=True, help="path to json file containing the fold indices")

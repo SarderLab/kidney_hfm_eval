@@ -47,11 +47,11 @@ class MemmapPatientBagsDataset(Dataset):
 
     def __getitem__(self, idx):
         pid = self.patients[idx]
-        y   = self.labels[idx]  # torch.float32 (regression)
+        y   = self.labels[idx].view(1)   # torch.float32 (regression)
 
         # Memory-map without reading fully into RAM
         path = self.index[pid][0]
         mm = np.load(path, mmap_mode="r")      # shape [N, D], dtype float32/16
-        x  = torch.from_numpy(mm)              # zero-copy CPU tensor view
+        x  = torch.from_numpy(mm).to(torch.float32)             # zero-copy CPU tensor view
 
         return x, y
