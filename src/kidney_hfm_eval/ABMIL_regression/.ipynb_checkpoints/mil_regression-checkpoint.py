@@ -236,16 +236,11 @@ def run_mil_pipeline(args):
             "L": 256,
         }
 
-        # full_param_grid = {
-        #     "dropout": [0.25, 0.5, 0.75],
-        #     "weight_decay": [0.01, 0.04, 0.1],
-        #     "lr": [1e-3, 5e-4, 1e-4],
-        #     "epochs": [30, 40],
-        # }
         full_param_grid = {
-            "lr": [2e-5, 5e-5, 1e-4],
+            "lr": [5e-5, 1e-4, 2e-4],
             "M":  [256, 512, 1024],
             "L":  [32, 128, 256],
+        
         }
 
         # --- Determine which parameters to tune ---
@@ -362,35 +357,13 @@ def run_mil_pipeline(args):
 
                             vector_size = infer_vector_size_from_dataset(tr_ds)
 
-#                             model = Attention(vector_size, M=512, L=256, attention_branches=1, dropout=hp_dict["dropout"]).to(device)
-
-#                             optimizer = optim.AdamW(get_params_groups(model),
-#                                                     lr=hp_dict["lr"],
-#                                                     weight_decay=hp_dict["weight_decay"])
-
-#                             lr_sched = cosine_scheduler(hp_dict["lr"], args.lr_end,
-#                                                         hp_dict["epochs"], len(tr_ld),
-#                                                         args.warmup_epochs)
-#                             wd_sched = cosine_scheduler(hp_dict["weight_decay"],
-#                                                         args.weight_decay_end,
-#                                                         hp_dict["epochs"], len(tr_ld),
-#                                                         args.warmup_epochs)
-
-#                             val_score  = train_until_stopping(
-#                                 tr_ld, vl_ld, model, optimizer,
-#                                 nn.MSELoss(), lr_sched, wd_sched,
-#                                 cuda, args.patience, args.tol, 
-#                                 num_epochs=hp_dict["epochs"],
-#                                 seed=seed, outer_fold_idx=fold_idx, 
-#                                 inner_fold_idx=inner_fold_idx, 
-#                                 log_file=log_file, hp_dict=hp_dict)
                             model = Attention(vector_size, M=hp_dict["M"], L=hp_dict["L"], dropout=hp_dict["dropout"]).to(device)
 
                             optimizer = optim.AdamW(
                                 get_params_groups(model),
                                 lr=hp_dict["lr"],
                                 weight_decay=hp_dict["weight_decay"],
-                                betas=(0.99, 0.9999),
+                                betas=(0.95, 0.99),
                                 eps=1e-4)
 
                             val_score = train_until_stopping(
@@ -554,6 +527,7 @@ def run_mil_pipeline(args):
                 'ci_hi':  vals.quantile(0.975)
             }
         summary_df = pd.DataFrame.from_dict(summary, orient='index')
+        summary_df = summary_df.T
         summary_df.to_csv(os.path.join(fm_log_dir, f'bootstrap_CI_MIL_{fm}.csv'))
         print(f" Saved bootstrap summary (mean + 95% CI) → bootstrap_CI_MIL_{fm}.csv", flush=True)
         

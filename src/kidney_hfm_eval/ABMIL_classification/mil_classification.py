@@ -55,15 +55,6 @@ def train_fold(train_loader, model, optimizer, criterion, epoch, cuda):
     n_iters = len(train_loader)
 
     for i, (data, label) in enumerate(train_loader):
-#         it = (epoch-1)*n_iters + i
-#         if i % 40 == 0:
-#             print(f"   epoch {epoch}, batch {i}/{n_iters}", flush=True)
-
-#         # update lr & wd
-#         for j, pg in enumerate(optimizer.param_groups):
-#             pg['lr'] = lr_sched[it]
-#             if j == 0:
-#                 pg['weight_decay'] = wd_sched[it]
         # constant LR and WD (no scheduler needed)
         for j, pg in enumerate(optimizer.param_groups):
             pg['lr'] = optimizer.defaults['lr']
@@ -76,8 +67,8 @@ def train_fold(train_loader, model, optimizer, criterion, epoch, cuda):
         data  = cast_to_model_dtype(data, model)
         label = label.long()  # labels stay ints
         optimizer.zero_grad()
-        x = data.view(data.size(1), data.size(-1))
-        logits, A = model(x)                 # now logits is [1,2]
+        # x = data.view(data.size(1), data.size(-1))
+        logits, A = model(data)   # data should be [B,K,D] or [K,D] # now logits is [1,2]
         # loss = criterion(logits, bag_label)  # bag_label is 0 or 1
         target = bag_label.view(-1)
         # print(logits, target, 'logits, target')
@@ -86,12 +77,13 @@ def train_fold(train_loader, model, optimizer, criterion, epoch, cuda):
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
         total_loss += loss.item()
-        probs = F.softmax(logits, dim=1)
-        pred = torch.argmax(probs, dim=1)
+        probs = F.softmax(logits, dim=1)          # [B, C]
+        pred  = torch.argmax(probs, dim=1)        # [B]
         all_true.extend(bag_label.view(-1).tolist())
         all_pred.extend(pred.view(-1).tolist())
-        all_prob.extend(probs[:,1].view(-1).tolist())
-
+        all_prob.extend(probs.detach().cpu().numpy())   # appends rows, each is length C
+        
+    all_prob = np.vstack(all_prob)   # shape [N, C]
     avg_loss = total_loss / n_iters
     metrics = calculate_metrics(
         np.array(all_true),
@@ -113,21 +105,18 @@ def test_fold(test_loader, model, criterion, cuda):
             if cuda:
                 data, bag_label = data.cuda(), bag_label.cuda()
             data  = cast_to_model_dtype(data, model)
-            x = data.view(data.size(1), data.size(-1))
-            logits, A = model(x)
+            # x = data.view(data.size(1), data.size(-1))
+            logits, A = model(data)
             loss = criterion(logits, bag_label.view(-1))
             total_loss += loss.item()
-            # probs = F.softmax(logits, dim=1)
-            # all_true.append(bag_label.item())
-            # all_prob.append(probs[:,1].item())
-            # pred  = torch.argmax(logits, dim=1)
-            probs = F.softmax(logits, dim=1)
-            pred  = torch.argmax(probs, dim=1)                  
+            probs = F.softmax(logits, dim=1)              # [B, C]
+            pred  = torch.argmax(probs, dim=1)            # [B]
             all_true.extend(bag_label.view(-1).tolist())
-            all_prob.extend(probs[:,1].view(-1).tolist())
-
+            all_prob.extend(probs.detach().cpu().numpy())
+    all_prob = np.vstack(all_prob)  # [N, C]
+    y_pred = np.argmax(all_prob, axis=1)
     avg_loss = total_loss / len(test_loader)
-    y_pred = (np.array(all_prob) > 0.5).astype(int)
+    # y_pred = (np.array(all_prob) > 0.5).astype(int)
     metrics = calculate_metrics(np.array(all_true), y_pred, np.array(all_prob))
     return avg_loss, metrics, np.array(all_true), np.array(all_prob)
 
@@ -199,22 +188,6 @@ def train_until_stopping(train_loader, val_loader, model, optimizer, criterion,
         model.load_state_dict(best_state)
     return best_val_mcc
 
-# def log_outer_epoch_cls(log_file, seed, outer_fold_idx, epoch, train_loss, tm):
-#     """Log outer-loop train-only metrics to the same CSV schema.
-#        We mark inner_fold='outer' and leave the val_* columns blank."""
-#     with open(log_file, 'a', newline='') as f:
-#         writer = csv.writer(f)
-#         writer.writerow([
-#             seed, outer_fold_idx, 'outer', epoch,
-#             f"{train_loss:.6f}",
-#             f"{tm.get('accuracy', np.nan):.6f}",
-#             f"{tm.get('precision', np.nan):.6f}",
-#             f"{tm.get('recall', np.nan):.6f}",
-#             f"{tm.get('f1_score', np.nan):.6f}",
-#             f"{tm.get('auroc', np.nan):.6f}",
-#             f"{tm.get('mcc', np.nan):.6f}",
-#             "", "", "", "", "", "", ""  # val_* placeholders
-#         ])
 def log_outer_epoch_cls(log_file, seed, outer_fold_idx, epoch, train_loss, tm, hp_dict=None):
     hp_dict = hp_dict or {}
     with open(log_file, 'a', newline='') as f:
@@ -243,33 +216,6 @@ def log_outer_epoch_cls(log_file, seed, outer_fold_idx, epoch, train_loss, tm, h
 def run_mil_pipeline(args):
     if isinstance(args, dict):
         args = argparse.Namespace(**args)
-
-    # parser = argparse.ArgumentParser(description='MIL nested-bootstrap + permutation test')
-    # parser.add_argument('--root_dir', required=True, default = "", help="Embeddings folders")
-    # parser.add_argument('--csv_path', required=True, help="CSV with patient_name + label")
-    # parser.add_argument('--epochs', type=int, default=40)
-    # # parser.add_argument('--lr', type=float, default=0.0005)
-    # parser.add_argument('--lr_end', type=float, default=1e-6)
-    # # parser.add_argument('--weight_decay', type=float, default=0.04)
-    # parser.add_argument('--weight_decay_end', type=float, default=0.4)
-    # parser.add_argument('--warmup_epochs', type=int, default=10)
-    # parser.add_argument('--k_folds', type=int, default=5)
-    # parser.add_argument('--batch_size', type=int, default=1)
-    # parser.add_argument('--seed', type=int, default=0)
-    # parser.add_argument('--num_seeds', type=int, default=3)
-    # parser.add_argument('--patience', type=int, default=8, help="Number of epochs with no improvement after which training will be stopped")
-    # parser.add_argument('--tol', type=float, default=0.0001, help="Minimum decrease in loss to qualify as an improvement")
-    # parser.add_argument('--inner_folds', type=int, default=4)
-    # parser.add_argument("--bootstrap", type=int, default=1000, help="Number of bootstrap replicates")
-    # parser.add_argument("--outer_fold", required=True, help="path to json file containing the fold indices")
-    # parser.add_argument("--log_file_path", required=True, help="path to log file which stores training loss")
-    # parser.add_argument("--models", nargs="+", default=["UNI", "UNI2-h", "Virchow", "Virchow2", "SP22M", "SP85M",
-    #         "H-optimus-0", "H-optimus-1", "Hibou-B", "Hibou-L"],help="List of foundation model names to train on (space-separated)")
-    # parser.add_argument("--tune_params", type=str, default="dropout,weight_decay,lr,epochs",
-    #     help="Comma-separated list of hyperparameters to include in nested CV tuning (others use argparse defaults)"
-    # )
-
-    # args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
     fm_names = args.models
 
@@ -287,15 +233,19 @@ def run_mil_pipeline(args):
         df = pd.read_csv(args.csv_path)
         df['ID'] = df['ID'].str.strip()
         patients = df['ID'].tolist()
-        labels   = df['class'].astype(int).tolist()
+        # labels   = df['class'].astype(int).tolist()
+        labels_raw = df["class"].astype(int)
+        C = labels_raw.nunique()   # infer number of classes from CSV
+        if C == 2:
+            uniq = sorted(df["class"].astype(int).unique().tolist())
+            if uniq != [0, 1]:
+                mapping = {uniq[0]: 0, uniq[1]: 1}
+                df["class"] = df["class"].map(mapping).astype(int)
+                print("Mapped binary labels to {0,1}:", mapping)
 
-        # --- Default values from argparse ---
-        # default_params = {
-        #     "dropout": 0.5,
-        #     "weight_decay": 0.04,
-        #     "lr": 5e-4,
-        #     "epochs": args.epochs,
-        # }
+        labels = df['class'].astype(int).tolist()
+        assert set(labels).issubset(set(range(C))), "Labels must be in [0, C-1]"
+
         default_params = {
             "dropout": 0.6,
             "weight_decay": 0.01,
@@ -305,23 +255,11 @@ def run_mil_pipeline(args):
             "L": 256,
         }
 
-        # --- Full parameter search space ---
-        # full_param_grid = {
-        #     "dropout": [0.25, 0.5, 0.75, 0.9],
-        #     "weight_decay": [0.01, 0.04, 0.1, 0.2],
-        #     "lr": [1e-3, 5e-4, 1e-4],
-        #     "epochs": [20, 30, 40],
-        # }
-        # full_param_grid = {
-        #     "dropout": [0.25, 0.5, 0.75],
-        #     "weight_decay": [0.01, 0.04, 0.1],
-        #     "lr": [1e-3, 5e-4, 1e-4],
-        #     "epochs": [30, 40],
-        # }
         full_param_grid = {
-            "lr": [2e-5, 5e-5, 1e-4],
+            "lr": [5e-5, 1e-4, 2e-4],
             "M":  [256, 512, 1024],
             "L":  [32, 128, 256],
+        
         }
 
         # --- Determine which parameters to tune ---
@@ -358,6 +296,10 @@ def run_mil_pipeline(args):
             ])
         with open(args.outer_fold, 'r') as f:
             all_fold_indices = json.load(f)
+        num_seeds = len(all_fold_indices)
+        k_folds   = len(next(iter(all_fold_indices.values())))  # assumes all seeds have same #folds
+        fold_counts = [len(v) for v in all_fold_indices.values()]
+        assert len(set(fold_counts)) == 1, "Mismatch in number of folds across seeds"
 
         for seed_str, fold_indices in all_fold_indices.items():
             seed = int(seed_str)
@@ -370,15 +312,20 @@ def run_mil_pipeline(args):
                 random.seed(seed + worker_id)
 
             for fold_idx, indices in enumerate(fold_indices, 1):
-                trainval_idx, test_idx = indices['trainval'], indices['test']
-                # tv_p = [patients[i] for i in trainval_idx]
-                tv_p = [p for p in patients if p in trainval_idx]
-                # tv_l = [labels[i]   for i in trainval_idx]model 
-                # te_p = [patients[i] for i in test_idx]
-                te_p = [p for p in patients if p in test_idx]
-                # te_l = [labels[i]   for i in test_idx]
-                tv_l = df.set_index("ID").loc[tv_p, "class"].astype(int).tolist()
-                te_l = df.set_index("ID").loc[te_p, "class"].astype(int).tolist()
+                trainval_ids = indices["trainval"]  # list of strings like "K1300468"
+                test_ids     = indices["test"]
+
+                tv_p = [str(x).strip() for x in trainval_ids]
+                te_p = [str(x).strip() for x in test_ids]
+
+                # map ID -> class using your CSV
+                id2y = dict(zip(df["ID"].astype(str).str.strip(), df["class"].astype(int)))
+
+                tv_l = [id2y[p] for p in tv_p]
+                te_l = [id2y[p] for p in te_p]
+                print(tv_p[:3], te_p[:3], "example train/test IDs")
+                print(tv_l[:3], te_l[:3], "example train/test labels")
+
                 print(tv_l, te_l, "tvl", "tel")
                 print(f"[MIL seed={seed} outer_fold={fold_idx}]")
                 print("   Train+Val IDs:", tv_p)
@@ -416,21 +363,21 @@ def run_mil_pipeline(args):
                                 fm_root, [tv_p[i] for i in val_idx], [tv_l[i] for i in val_idx],
                                 map_location="cpu", max_cache=4)
 
-                            tr_ld = DataLoader(tr_ds, batch_size=args.batch_size, shuffle=True,
+                            tr_ld = DataLoader(tr_ds, batch_size=1, shuffle=True,
                                                num_workers=4, pin_memory=args.cuda, persistent_workers=True,
                                                worker_init_fn=_seed_worker, generator=g)
-                            vl_ld = DataLoader(vl_ds, batch_size=args.batch_size,
+                            vl_ld = DataLoader(vl_ds, batch_size=1,
                                                num_workers=4, pin_memory=args.cuda, persistent_workers=True,
                                                worker_init_fn=_seed_worker, generator=g)
 
                             vector_size = infer_vector_size_from_dataset(tr_ds)
-                            model = Attention(vector_size, M=hp_dict["M"], L=hp_dict["L"], dropout=hp_dict["dropout"]).to(device)
+                            model = Attention(vector_size, M=hp_dict["M"], L=hp_dict["L"], dropout=hp_dict["dropout"], n_classes=C).to(device)
 
                             optimizer = optim.AdamW(
                                 get_params_groups(model),
                                 lr=hp_dict["lr"],
                                 weight_decay=hp_dict["weight_decay"],
-                                betas=(0.99, 0.9999),
+                                betas=(0.95, 0.99),
                                 eps=1e-4)
 
                             val_mcc = train_until_stopping(
@@ -484,16 +431,16 @@ def run_mil_pipeline(args):
                     fm_root, te_p, te_l, map_location="cpu", max_cache=8
                 )
                 tr_ld = DataLoader(
-                    train_ds, batch_size=args.batch_size, shuffle=True, drop_last=False,
+                    train_ds, batch_size=1, shuffle=True, drop_last=False,
                     num_workers=4, pin_memory=args.cuda, persistent_workers=True, worker_init_fn=_seed_worker, generator=g
                 )
                 te_ld = DataLoader(
-                    te_ds, batch_size=args.batch_size,
+                    te_ds, batch_size=1,
                     num_workers=4, pin_memory=args.cuda, persistent_workers=True,worker_init_fn=_seed_worker, generator=g
                 )
                 vector_size_outer = infer_vector_size_from_dataset(train_ds)
                 model = Attention(vector_size_outer, M=best_params["M"], L=best_params["L"],
-                                  dropout=best_params["dropout"]).to(device)
+                                  dropout=best_params["dropout"], n_classes=C).to(device)
                 opt   = optim.AdamW(get_params_groups(model), lr=best_params["lr"], weight_decay=best_params["weight_decay"],betas=(0.99, 0.9999), eps=1e-4)
                 # lr_s = cosine_scheduler(best_params["lr"], args.lr_end, best_params["epochs"], len(tr_ld), args.warmup_epochs)
                 # wd_s = cosine_scheduler(best_params["weight_decay"], args.weight_decay_end, best_params["epochs"], len(tr_ld), args.warmup_epochs)
@@ -501,7 +448,9 @@ def run_mil_pipeline(args):
                 print( "Outer‐fold final training")
                 for epoch in range(1, best_params["epochs"]+1):
                     _avg_loss, _trm = train_fold(tr_ld, model, opt, criterion, epoch, cuda)
-                    log_outer_epoch_cls(log_file, seed, fold_idx, epoch, _avg_loss, _trm)
+                    # log_outer_epoch_cls(log_file, seed, fold_idx, epoch, _avg_loss, _trm)
+                    log_outer_epoch_cls(log_file, seed, fold_idx, epoch, _avg_loss, _trm, hp_dict=best_params)
+
                     if epoch % 5 == 0 or epoch == 1 or epoch == best_params["epochs"]:
                         print(f"[outer seed={seed} fold={fold_idx}] epoch {epoch:03d} "
                               f"train MCC={_trm['mcc']:.4f}", flush=True)
@@ -545,8 +494,8 @@ def run_mil_pipeline(args):
         all_y_ids = np.concatenate(all_y_ids_list)   # shape == (N_images * num_seeds,)
         unique_ids = np.unique(all_y_ids)             
         n = len(all_y_true)
-        print(n, 'n', args.k_folds* args.num_seeds, "folds, sseds")
-        sample_size = n // (args.k_folds* args.num_seeds)   # or choose your own
+        print(n, 'n', k_folds* num_seeds, "folds, sseds")
+        sample_size = n // (k_folds* num_seeds)   # or choose your own
         print(sample_size, "sample_size")
         records = list(zip(all_y_ids, all_y_true, all_y_prob))
         # Group by patient ID
@@ -576,29 +525,59 @@ def run_mil_pipeline(args):
 
             y_tb = np.array(sel_true)
             y_pb = np.array(sel_prob)
-            y_predb = (y_pb > 0.5).astype(int)
-            scores = y_predb
-            # detect single‐class
-            if len(np.unique(y_tb)) < 2:
-                auroc = np.nan
-                auprc = np.nan
-            else:
-                auroc = roc_auc_score(y_tb, y_pb)
-                auprc = average_precision_score(y_tb, y_pb)
+            # y_predb = (y_pb > 0.5).astype(int)
+            y_predb = np.argmax(y_pb, axis=1)   # if y_pb is [N, C]
+            is_binary = (C == 2)
+            avg = None if is_binary else "macro"
+            # is_binary = (C == 2)
 
-            # idxs = rng.choice(n, size=sample_size, replace=False)
-            tn, fp, fn, tp = confusion_matrix(y_tb, y_predb, labels=[0,1]).ravel()
+            if is_binary:
+                labels_present = np.unique(y_tb)
+
+                if len(labels_present) < 2:
+                    prec = precision_score(y_tb, y_predb, average="macro", zero_division=0)
+                    rec  = recall_score(y_tb, y_predb, average="macro", zero_division=0)
+                    f1   = f1_score(y_tb, y_predb, average="macro", zero_division=0)
+                    spec = np.nan
+                    auroc = np.nan
+                    auprc = np.nan
+                else:
+                    # IMPORTANT: this assumes your binary labels are exactly {0,1}
+                    tn, fp, fn, tp = confusion_matrix(y_tb, y_predb, labels=[0, 1]).ravel()
+
+                    prec = precision_score(y_tb, y_predb, average="binary", pos_label=1, zero_division=0)
+                    rec  = recall_score(y_tb, y_predb, average="binary", pos_label=1, zero_division=0)
+                    f1   = f1_score(y_tb, y_predb, average="binary", pos_label=1, zero_division=0)
+
+                    spec = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+                    auroc = roc_auc_score(y_tb, y_pb[:, 1])
+                    auprc = average_precision_score(y_tb, y_pb[:, 1])
+
+            else:
+                prec = precision_score(y_tb, y_predb, average="macro", zero_division=0)
+                rec  = recall_score(y_tb, y_predb, average="macro", zero_division=0)
+                f1   = f1_score(y_tb, y_predb, average="macro", zero_division=0)
+                spec = np.nan
+                tmp = calculate_metrics(y_tb, y_predb, y_pb)
+                auroc = tmp["auroc"]
+                auprc = tmp["auprc"]
+
+            scores = y_predb
+            acc  = accuracy_score(y_tb, y_predb)
+            bacc = balanced_accuracy_score(y_tb, y_predb)
+            mcc  = matthews_corrcoef(y_tb, y_predb)
+
             all_boot_metrics.append({
-                'bootstrap_idx':      b,
-                'accuracy':           accuracy_score(y_tb, y_predb),
-                'balanced_accuracy':  balanced_accuracy_score(y_tb, y_predb),
-                'precision':          precision_score(y_tb, y_predb),
-                'recall':             recall_score(y_tb, y_predb),
-                'specificity':        tn/(tn+fp) if (tn+fp)>0 else 0.0,
-                'f1':                 f1_score(y_tb, y_predb),
-                'mcc':                matthews_corrcoef(y_tb, y_predb),
-                'auroc':              auroc,
-                'auprc':              auprc,
+                "bootstrap_idx": b,
+                "accuracy": acc,
+                "balanced_accuracy": bacc,
+                "precision": prec,
+                "recall": rec,
+                "specificity": spec,
+                "f1": f1,
+                "mcc": mcc,
+                "auroc": auroc,
+                "auprc": auprc,
             })
 
         # 3) save the full bootstrap‐replicate table
@@ -632,16 +611,14 @@ def main():
     # parser.add_argument('--lr_end', type=float, default=1e-6)
     # parser.add_argument('--weight_decay_end', type=float, default=0.4)
     # parser.add_argument('--warmup_epochs', type=int, default=10)
-    parser.add_argument('--k_folds', type=int, default=5)
-    parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--num_seeds', type=int, default=3)
     parser.add_argument('--patience', type=int, default=20)
     # parser.add_argument('--tol', type=float, default=0.0001)
     parser.add_argument('--inner_folds', type=int, default=4)
     parser.add_argument('--bootstrap', type=int, default=1000)
     parser.add_argument('--outer_fold', required=True)
     parser.add_argument('--log_file_path', required=True)
+    parser.add_argument("--num_classes", type=int, required=True)
     parser.add_argument('--models', nargs="+", default=[
         "UNI", "UNI2-h", "Virchow", "Virchow2",
         "SP22M", "SP85M", "H-optimus-0", "H-optimus-1", "Hibou-B", "Hibou-L", "Prov-Gigapath"

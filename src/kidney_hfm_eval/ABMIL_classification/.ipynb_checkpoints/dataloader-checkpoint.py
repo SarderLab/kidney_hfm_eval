@@ -13,8 +13,10 @@ class MemmapPatientBagsDataset(Dataset):
         self.packed_root = packed_root
         self.patients = list(split_patients)
         # build labels aligned to patients
-        self.labels_map = {str(k).strip(): float(v) for k, v in labels_map.items()}
-        self.labels = [torch.tensor(self.labels_map[p], dtype=torch.float32) for p in self.patients]
+        # self.labels_map = {str(k).strip(): float(v) for k, v in labels_map.items()}
+        self.labels_map = {str(k).strip(): int(v) for k, v in labels_map.items()}
+        # self.labels = [torch.tensor(self.labels_map[p], dtype=torch.float32) for p in self.patients]
+        self.labels = [torch.tensor(self.labels_map[p], dtype=torch.long) for p in self.patients]
         self.on_disk_dtype = on_disk_dtype  # informational only
 
         # Expose an `index` dict to be compatible with your old code
@@ -34,11 +36,13 @@ class MemmapPatientBagsDataset(Dataset):
             )
         # prune any patients that somehow ended up without a file
         self.patients = [p for p in self.patients if p in self.index]
-        self.labels   = [torch.tensor(self.labels_map[p], dtype=torch.float32) for p in self.patients]
+        self.labels   = [torch.tensor(self.labels_map[p], dtype=torch.long) for p in self.patients]
 
     @classmethod
     def from_lists(cls, packed_root, patient_list, label_list, on_disk_dtype="float32", **_):
-        labels_map = {str(p).strip(): float(l) for p, l in zip(patient_list, label_list)}
+        labels_map = {str(p).strip(): int(l) for p, l in zip(patient_list, label_list)}
+        # labels_map = {str(k).strip(): int(v) for k, v in labels_map.items()}
+
         return cls(packed_root, split_patients=list(labels_map.keys()), labels_map=labels_map,
                    on_disk_dtype=on_disk_dtype)
 

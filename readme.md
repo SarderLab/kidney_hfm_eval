@@ -143,9 +143,6 @@ This script serves as the **first stage** of the HFM benchmarking pipeline, gene
 
 * Supports multiple HFMs: UNI, Virchow, Hibou, H-optimus, SP22M, SP85M, Prov-Gigapath, etc.
 * Sequential extraction:  builds one model at a time to minimize GPU memory usage.
-* Fully deterministic and reproducible: TF32 disabled, fixed cuDNN behavior, deterministic GEMMs.
-* Automatic directory creation and safe skipping of existing `.pt` files.
-* Compatible with CUDA or CPU fallback.
 * Configurable from the command line with flexible argument parsing.
 
 ---
@@ -897,27 +894,18 @@ args = {
 
     # Hyperparameters to tune
     "tune_params": "lr,M,L",
-
-    # Training configuration
     "epochs": 50,
-    "patience": 20,
-    "k_folds": 5,       # outer folds
+    "patience": 10,
     "inner_folds": 4,   # nested CV inside each outer fold
-    "batch_size": 1,
-
-    # Reproducibility
     "seed": 0,
-    "num_seeds": 3,     # train each model with seeds {0,1,2}
-
-    # Uncertainty estimation
     "bootstrap": 1000,
-
-    # Foundation models to evaluate
+    "num_classes": 2,
     "models": [
         "UNI", "UNI2-h", "Virchow", "Virchow2",
         "SP22M", "SP85M", "H-optimus-0", "H-optimus-1",
         "Hibou-B", "Hibou-L", "Prov-Gigapath"
     ],
+    "num_classes": 2,
 }
 
 # Run ABMIL pipeline
