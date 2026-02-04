@@ -115,7 +115,7 @@ pip install -r requirements.txt
 
 ```bash
 # Clone the repository
-pip install kidney_hfm_eval
+pip install --no-cache-dir kidney-hfm-eval==0.1.11
 import kidney_hfm_eval
 ```
 
