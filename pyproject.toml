@@ -29,15 +29,14 @@ dependencies = [
     "tiffslide",
     "imageio",
     "scikit-image",
-    "pyvips"
+    "pyvips",
     "timm>=1.0.0",
     "transformers>=4.36",
     "huggingface-hub>=0.20",
     "einops>=0.8",
     "fvcore",
     "iopath",
-    "vision-transformer",  
-]
+    "vision-transformer", ]
 
 [project.urls]
 Homepage = "https://github.com/SarderLab/kidney_hfm_eval.git"
