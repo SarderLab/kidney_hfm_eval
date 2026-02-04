@@ -1,8 +1,5 @@
-import pandas as pd
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-
 
 class Attention(nn.Module):
     def __init__(self, vector_size=1024, M=512, L=256, dropout=0.6, n_classes=2):

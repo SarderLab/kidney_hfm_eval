@@ -7,8 +7,6 @@ import pandas as pd
 import torch, csv
 import torch.nn as nn
 import torch.optim as optim
-import torch.utils.data as data_utils
-import torch.nn.functional as F
 from sklearn.metrics import (
     confusion_matrix,
     accuracy_score,
@@ -22,14 +20,13 @@ from sklearn.metrics import (
 )
 from .dataloader import MemmapPatientBagsDataset
 from collections import defaultdict
-from sklearn.utils.class_weight import compute_class_weight
 from .model import Attention
-from torch.utils.data import WeightedRandomSampler, DataLoader
+from torch.utils.data import DataLoader
 from sklearn.model_selection import KFold
 # device = torch.device("cuda" if args.cuda else "cpu")
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from scipy.stats import pearsonr, spearmanr
-from .helper import infer_vector_size_from_dataset, get_params_groups, cosine_scheduler, calculate_metrics, cast_to_model_dtype
+from .helper import infer_vector_size_from_dataset, get_params_groups, calculate_metrics, cast_to_model_dtype
 from itertools import product
 
 # cuDNN determinism
@@ -421,8 +418,6 @@ def run_mil_pipeline(args):
                 model = Attention(vector_size_outer, M=best_params["M"], L=best_params["L"],
                                   dropout=best_params["dropout"]).to(device)
                 opt   = optim.AdamW(get_params_groups(model), lr=best_params["lr"], weight_decay=best_params["weight_decay"],betas=(0.99, 0.9999), eps=1e-4)
-                # lr_s = cosine_scheduler(best_params["lr"], args.lr_end, best_params["epochs"], len(tr_ld), args.warmup_epochs)
-                # wd_s = cosine_scheduler(best_params["weight_decay"], args.weight_decay_end, best_params["epochs"], len(tr_ld), args.warmup_epochs)
                 print( "Outer‐fold final training")
                 for epoch in range(1, best_params["epochs"]+1):
                     _avg_loss, _trm = train_fold(tr_ld, model, opt, criterion, epoch, cuda)

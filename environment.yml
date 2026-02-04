@@ -369,4 +369,3 @@ dependencies:
       - xgboost==2.0.3
       - yacs==0.1.8
       - zarr==2.18.2
-prefix: /blue/pinaki.sarder/harishwarreddy.k/conda/envs/gigapath

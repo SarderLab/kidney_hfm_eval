@@ -21,9 +21,7 @@ from sklearn.metrics import (
 import random, argparse
 from collections import defaultdict
 from sklearn.metrics import (
-    accuracy_score, balanced_accuracy_score, matthews_corrcoef,
-    f1_score, precision_score, recall_score,
-    roc_auc_score, average_precision_score, multilabel_confusion_matrix
+    multilabel_confusion_matrix
 )
 from sklearn.neighbors import KNeighborsClassifier
 
@@ -111,31 +109,7 @@ def compute_metrics(y_true, y_pred, y_prob=None, classes=None):
             try:
                 m["auprc"] = average_precision_score(y_true, pos_prob)
             except ValueError:
-                m["auprc"] = np.nan
-
-#     else:  # ── multiclass (macro) ────────────────────────────────────────────
-#         m.update({
-#             "f1_macro":        f1_score(y_true, y_pred, average='macro', zero_division=0),
-#             "precision_macro": precision_score(y_true, y_pred, average='macro', zero_division=0),
-#             "recall_macro":    recall_score(y_true, y_pred, average='macro', zero_division=0),
-#         })
-#         cm = multilabel_confusion_matrix(y_true, y_pred, labels=classes)
-#         tn = cm[:, 0, 0]; fp = cm[:, 0, 1]
-#         spec = np.where((tn+fp) > 0, tn/(tn+fp), np.nan)
-#         m["specificity_macro"] = np.nanmean(spec)
-
-#         if (y_prob is not None) and (classes is not None):
-#             try:
-#                 y_bin = label_binarize(y_true, classes=classes)
-#                 m["auroc_macro"] = roc_auc_score(y_bin, y_prob, average='macro', multi_class='ovr')
-#             except ValueError:
-#                 m["auroc_macro"] = np.nan
-#             try:
-#                 y_bin = label_binarize(y_true, classes=classes)
-#                 m["auprc_macro"] = average_precision_score(y_bin, y_prob, average='macro')
-#             except ValueError:
-#                 m["auprc_macro"] = np.nan
-                
+                m["auprc"] = np.nan                
                 
     else:  # ── multiclass (macro) ────────────────────────────────────────────
         m.update({
@@ -292,73 +266,6 @@ def run_bootstrap(fold_results, classes, B=1000, seed=0, sample_frac=None):
     }, index=["mean", "ci_lo", "ci_hi"])
 
     return boot_df, summary
-
-# def main():
-#     parser = argparse.ArgumentParser(description="Run CV + bootstrap evaluation on embeddings from CSV")
-#     parser.add_argument(
-#         "--models", nargs="+", default=[],
-#         help="Which FMs to run (space-separated). Default = all available"
-#     )
-#     parser.add_argument(
-#         "--emb_dir", type=str, required=True,
-#         help="Root directory containing per-model embeddings"
-#     )
-#     parser.add_argument(
-#     "--out_dir", type=str, default="results",
-#     help="Directory where results will be saved"
-#     )
-#     parser.add_argument(
-#         "--csv_file", type=str, required=True,
-#         help="Single CSV file (with ID, Group_ID, class) used by all foundation models"
-#     )
-
-#     parser.add_argument("--splits", type=int, default=5, help="Number of CV folds")
-#     parser.add_argument("--seeds", type=int, nargs="+", default=[0,1,2], help="Random seeds for CV")
-#     parser.add_argument("--bootstrap", type=int, default=1000, help="Number of bootstrap replicates")
-#     args = parser.parse_args()
-
-#     # default FM list if not provided
-#     all_fms = ["UNI", "UNI2-h", "Virchow", "Virchow2",
-#                "SP22M", "SP85M", "H-optimus-0", "H-optimus-1",
-#                "Prov-Gigapath", "Hibou-B", "Hibou-L"]
-#     fm_names = args.models if args.models else all_fms
-
-#     for fm in fm_names:
-#         print(f"\n=== Running {fm} ===")
-#         csv_path = args.csv_file
-#         embeddings_dir = os.path.join(args.emb_dir, fm)
-
-#         if not os.path.exists(csv_path):
-#             print(f"[skip] Missing CSV: {csv_path}")
-#             continue
-#         if not os.path.exists(embeddings_dir):
-#             print(f"[skip] Missing embeddings dir: {embeddings_dir}")
-#             continue
-
-#         # load
-#         X, groups, samples, y = load_from_csv(csv_path, embeddings_dir)
-#         classes = sorted(np.unique(y))
-
-#         # ── CROSS-VALIDATION ──
-#         cv_df, fold_results = run_cross_validation(X, y, groups, samples,
-#                                                    classes, seeds=args.seeds,
-#                                                    n_splits=args.splits)
-#         fm_outdir = os.path.join(args.out_dir, fm)
-#         os.makedirs(fm_outdir, exist_ok=True)
-
-#         cv_out   = os.path.join(fm_outdir, f"cv_results_kNN_{fm}.csv")
-#         boot_out = os.path.join(fm_outdir, f"bootstrap_replicates_kNN_{fm}.csv")
-#         ci_out   = os.path.join(fm_outdir, f"bootstrap_CI_kNN_{fm}.csv")
-
-#         # save cross-validation
-#         cv_df.to_csv(cv_out, index=False)
-
-#         # run and save bootstrap
-#         boot_df, ci_summary = run_bootstrap(fold_results, classes, B=args.bootstrap, seed=1)
-#         boot_df.to_csv(boot_out, index=False)
-#         ci_summary.to_csv(ci_out)
-
-#         print(f" Saved results for {fm} → {cv_out}, {boot_out}, {ci_out}")
 
 def run_kNN_probe(csv_file, emb_root, out_dir, models=None, n_splits=5, seeds=(0, 1, 2), bootstrap=1000):
     """Reusable function version of the kNN probing pipeline."""

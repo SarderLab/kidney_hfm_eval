@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kidney-hfm-eval"
-version = "0.1.3"
+version = "0.1.4"
 description = "Evaluation framework for histopathology foundation models (HFMs) in kidney pathology"
 readme = "readme.md"
 requires-python = ">=3.9"
@@ -24,29 +24,19 @@ dependencies = [
     "tqdm>=4.66",
     "matplotlib>=3.7",
     "seaborn>=0.13",
-    "Pillow>=10.0"
-]
-
-[project.optional-dependencies]
-
-wsi = [
+    "Pillow>=10.0",
     "tifffile",
     "tiffslide",
     "imageio",
     "scikit-image",
     "pyvips"
-]
-
-fms = [
     "timm>=1.0.0",
     "transformers>=4.36",
     "huggingface-hub>=0.20",
     "einops>=0.8",
     "fvcore",
     "iopath",
-    "gigapath",
-    "UNI",
-    "vision-transformer"
+    "vision-transformer"    
 ]
 
 [project.urls]

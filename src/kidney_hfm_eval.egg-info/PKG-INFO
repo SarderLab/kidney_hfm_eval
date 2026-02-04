@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: kidney-hfm-eval
-Version: 0.1.3
+Version: 0.1.4
 Summary: Evaluation framework for histopathology foundation models (HFMs) in kidney pathology
 Author-email: Harishwar Reddy Kasireddy <harishwarreddy.k@ufl.edu>
 License: MIT

@@ -1,16 +1,9 @@
-import gc, argparse, os
+import argparse, os
 from pathlib import Path
 from typing import Callable, Dict, Tuple
-from . import vision_transformer
 import torch.nn as nn
 import torch
-import timm
 from PIL import Image
-from torchvision import transforms
-from transformers import AutoImageProcessor, AutoModel
-from timm.layers import SwiGLUPacked
-import torch
-from huggingface_hub import PyTorchModelHubMixin
 from .model_builders_tile import build_ProvGigapath, build_UNI, build_UNI2_h, build_Virchow, build_Virchow2, build_Hibou, build_Hoptimus, build_SP22M, build_SP85M                             
 from .utils import reset_cuda, list_images, ensure_out_dir, open_rgb
 
@@ -37,13 +30,13 @@ torch.set_num_threads(1)
 
 # -------------------- Registry & runner --------------------
 
-def model_builders_tile(device: torch.device) -> Dict[str, Callable[[], Tuple[Callable, Callable]]]:
+def model_builders_tile(device: torch.device, BASE_MODEL_WEIGHT: str) -> Dict[str, Callable[[], Tuple[Callable, Callable]]]:
     """
     Returns a dict of name -> zero-arg callable that, when called,
     constructs (encode_fn, teardown_fn). This defers model construction
     until the moment we actually run that model.
     """
-    BASE_MODEL_WEIGHT = "/orange/pinaki.sarder/harishwarreddy.k/Validation_of_Hist_FMs_new/Model_weights"
+    # BASE_MODEL_WEIGHT = "/orange/pinaki.sarder/harishwarreddy.k/Validation_of_Hist_FMs_new/Model_weights"
 
     return {
         # Prov-Gigapath

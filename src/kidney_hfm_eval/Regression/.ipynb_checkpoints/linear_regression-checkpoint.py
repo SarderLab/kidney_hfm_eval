@@ -1,4 +1,4 @@
-import os, torch, argparse, re, gc, warnings
+import os, torch, gc, warnings
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold
@@ -13,11 +13,7 @@ from sklearn.metrics import (
     mean_squared_error,
     mean_absolute_percentage_error,  
 )
-from collections import defaultdict
-from scipy.stats import pearsonr
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import Ridge
-import warnings
 from scipy.stats import ConstantInputWarning
 warnings.filterwarnings("ignore", category=ConstantInputWarning)
 
@@ -154,7 +150,7 @@ def run_cv_regression(X, y, sample_ids, groups, n_splits=5, seeds=(0,1,2)):
             X_te_scaled = scaler.transform(X_te)
 
             # Train model
-            model = Ridge(alpha=1.0, solver="svd")
+            model = Ridge(alpha=alpha, solver="svd")
             model.fit(X_tr_scaled, y_tr)
             y_pred = model.predict(X_te_scaled)
 
@@ -219,68 +215,6 @@ def run_bootstrap_regression(fold_results, B=1000, seed=0):
     return boot_df, ci_summary
 fm_names = ["UNI", "UNI2-h", "Virchow", "Virchow2", "SP22M", "SP85M", "H-optimus-0", "H-optimus-1", "Prov-Gigapath", "Hibou-B", "Hibou-L"]
 
-# def main():
-#     parser = argparse.ArgumentParser(description="Ridge Regression with GroupKFold CV and Bootstrap")
-#     parser.add_argument("--embeddings_dir", type=str, required=True,
-#                         help="Path to folder containing embedding .pt files")
-#     parser.add_argument("--labels_dir", type=str, required=True,
-#                         help="Path to folder containing label .pt files (same filenames as embeddings)")
-#     parser.add_argument("--csv_path", type=str, required=True,
-#                         help="CSV file with columns [ID, Group_ID]")
-#     parser.add_argument("--models", nargs="+", default=["UNI", "UNI2-h", "Virchow", "Virchow2", "SP22M", "SP85M", "H-optimus-0", "H-optimus-1", "Prov-Gigapath", "Hibou-B", "Hibou-L"])
-#     parser.add_argument("--n_splits", type=int, default=5)
-#     parser.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2])
-#     parser.add_argument("--bootstrap_iters", type=int, default=1000)
-#     parser.add_argument("--output_dir", type=str, default="results_regression")
-
-#     args = parser.parse_args()
-
-#     for fm in args.models:
-#         print(f"\n Processing feature model: {fm}")
-
-#         embedding_dir = os.path.join(args.embeddings_dir, fm)
-#         label_dir = args.labels_dir
-
-#         print(" Reading CSV and matching embeddings/labels…")
-#         sample_ids, groups, y, emb_paths = make_index_from_csv(
-#             emb_folder=embedding_dir,
-#             label_root=label_dir,
-#             csv_path=args.csv_path
-#         )
-
-#         print(f"Loaded {len(sample_ids)} samples | unique groups: {len(np.unique(groups))}")
-#         print(" Running regression…")
-
-#         # Load all embeddings into memory
-#         X = np.vstack([get_embedding(p) for p in emb_paths])
-
-#         cv_df, fold_results = run_cv_regression(
-#             X, y, sample_ids, groups,
-#             n_splits=args.n_splits,
-#             seeds=tuple(args.seeds)
-#         )
-
-#         os.makedirs(args.output_dir, exist_ok=True)
-#         fm_outdir = os.path.join(args.output_dir, fm)
-#         os.makedirs(fm_outdir, exist_ok=True)
-
-#         # --- Save CV results ---
-#         out_cv = os.path.join(fm_outdir, f"regression_cv_results_{fm}.csv")
-#         cv_df.to_csv(out_cv, index=False)
-#         print(f" Saved regression CV results → {out_cv}")
-
-#         # --- Run bootstrapping ---
-#         boot_df, ci_summary = run_bootstrap_regression(
-#             fold_results, B=args.bootstrap_iters, seed=1
-#         )
-
-#         # --- Save bootstrap results ---
-#         out_boot = os.path.join(fm_outdir, f"regression_bootstrap_replicates_{fm}.csv")
-#         out_ci   = os.path.join(fm_outdir, f"regression_bootstrap_CI_{fm}.csv")
-
-#         boot_df.to_csv(out_boot, index=False)
-#         ci_summary.to_csv(out_ci)
-#         print(f" Saved bootstrap results → {out_boot}, {out_ci}")
 
 def run_regression_probe(
     emb_root,

@@ -1,4 +1,3 @@
-from __future__ import print_function
 import warnings
 warnings.filterwarnings('ignore')
 import argparse
@@ -8,7 +7,6 @@ import pandas as pd
 import torch, csv
 import torch.nn as nn
 import torch.optim as optim
-import torch.utils.data as data_utils
 import torch.nn.functional as F
 from .dataloader import MemmapPatientBagsDataset
 from sklearn.metrics import (
@@ -23,9 +21,8 @@ from sklearn.metrics import (
     average_precision_score,
 )
 from collections import defaultdict
-from sklearn.utils.class_weight import compute_class_weight
 from .model import Attention
-from torch.utils.data import WeightedRandomSampler, DataLoader
+from torch.utils.data import DataLoader
 from sklearn.model_selection import StratifiedKFold
 # device = torch.device("cuda" if args.cuda else "cpu")
 import random
@@ -608,9 +605,6 @@ def main():
     parser.add_argument('--root_dir', required=True)
     parser.add_argument('--csv_path', required=True)
     parser.add_argument('--epochs', type=int, default=50)
-    # parser.add_argument('--lr_end', type=float, default=1e-6)
-    # parser.add_argument('--weight_decay_end', type=float, default=0.4)
-    # parser.add_argument('--warmup_epochs', type=int, default=10)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--patience', type=int, default=20)
     # parser.add_argument('--tol', type=float, default=0.0001)
@@ -618,12 +612,10 @@ def main():
     parser.add_argument('--bootstrap', type=int, default=1000)
     parser.add_argument('--outer_fold', required=True)
     parser.add_argument('--log_file_path', required=True)
-    parser.add_argument("--num_classes", type=int, required=True)
     parser.add_argument('--models', nargs="+", default=[
         "UNI", "UNI2-h", "Virchow", "Virchow2",
         "SP22M", "SP85M", "H-optimus-0", "H-optimus-1", "Hibou-B", "Hibou-L", "Prov-Gigapath"
     ])
-    # parser.add_argument("--tune_params", type=str, default="dropout,weight_decay,lr,epochs")
     parser.add_argument("--tune_params", type=str, default="lr,M,L")
 
     args = parser.parse_args()

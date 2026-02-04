@@ -1,16 +1,7 @@
-import os, gc, argparse
-from pathlib import Path
-from typing import Callable, Dict, Tuple
-from . import vision_transformer
-import torch.nn as nn
+import os, gc
 import torch
-import timm
 from PIL import Image
 from torchvision import transforms
-from transformers import AutoImageProcessor, AutoModel
-from timm.layers import SwiGLUPacked
-import os, torch
-from huggingface_hub import PyTorchModelHubMixin
 IMG_EXTS = (".png", ".jpg", ".jpeg", ".tif", ".tiff")
 
 def reset_cuda():
@@ -22,7 +13,7 @@ def reset_cuda():
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
         torch.cuda.ipc_collect()
-    print(" CUDA memory fully reset")
+    # print(" CUDA memory fully reset")
 
 def list_images(input_root: str):
     input_root = str(input_root)

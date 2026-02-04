@@ -1,4 +1,4 @@
-import os, sys, glob, json
+import os, glob, json
 import numpy as np
 import torch, argparse
 from pathlib import Path
@@ -74,93 +74,6 @@ def pack_patient_dir(patient_dir, out_file):
     np.save(out_file, arr)
     return arr.shape + (stats,)
 
-# def main(root_dir, out_root):
-#     Path(out_root).mkdir(parents=True, exist_ok=True)
-#     patients = [p for p in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, p))]
-#     index = {}
-#     summary = {"patients": 0, "with_data": 0, "without_data": 0, "skipped_files": 0}
-
-#     for p in tqdm(sorted(patients), desc="Packing patients"):
-#         p_dir = os.path.join(root_dir, p)
-#         out_file = os.path.join(out_root, f"{p}.npy")
-
-#         # Fast path if valid npy already exists
-#         if os.path.exists(out_file):
-#             try:
-#                 arr = np.load(out_file, mmap_mode="r")
-#                 index[p] = {"file": out_file, "shape": arr.shape}
-#                 summary["patients"] += 1
-#                 summary["with_data"] += int(arr.shape[0] > 0)
-#                 summary["without_data"] += int(arr.shape[0] == 0)
-#                 continue
-#             except Exception:
-#                 print(f"[INFO] {out_file} is invalid, rebuilding…")
-#                 try: os.remove(out_file)
-#                 except OSError: pass
-
-#         try:
-#             N, D, stats = pack_patient_dir(p_dir, out_file)
-#             summary["patients"] += 1
-#             summary["skipped_files"] += stats.get("skipped", 0)
-#             if N > 0:
-#                 index[p] = {"file": out_file, "shape": (N, D), "stats": stats}
-#                 summary["with_data"] += 1
-#             else:
-#                 summary["without_data"] += 1
-#                 # ensure we don't leave a bogus npy
-#                 if os.path.exists(out_file):
-#                     try: os.remove(out_file)
-#                     except OSError: pass
-#                 if stats["skipped"] > 0:
-#                     print(f"[WARN] {p}: all files skipped; reasons: {stats['reasons']}")
-#         except Exception as e:
-#             print(f"[WARN] skipping {p}: {e}")
-
-#     with open(os.path.join(out_root, "_manifest.json"), "w") as f:
-#         json.dump(index, f, indent=2)
-#     with open(os.path.join(out_root, "_summary.json"), "w") as f:
-#         json.dump(summary, f, indent=2)
-#     print(f"Packed {len(index)} patients into {out_root}")
-#     print(f"Summary: {summary}")
-
-# # if __name__ == "__main__":
-# #     if len(sys.argv) < 3:
-# #         print("Usage: pack_patients_to_npy.py <root_dir> <out_root>")
-# #         sys.exit(1)
-# #     main(sys.argv[1], sys.argv[2])
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser(
-#         description="Pack per-patient .pt embeddings into .npy files with manifest and summary."
-#     )
-#     parser.add_argument(
-#         "--root_dir", type=str, required=True,
-#         help="Path to input root directory containing patient subfolders with .pt embeddings."
-#     )
-#     parser.add_argument(
-#         "--out_root", type=str, required=True,
-#         help="Output directory where packed .npy files and JSON manifests will be saved."
-#     )
-#     parser.add_argument(
-#         "--manifest_name", type=str, default="_manifest.json",
-#         help="Filename for the manifest JSON file (default: _manifest.json)."
-#     )
-#     parser.add_argument(
-#         "--summary_name", type=str, default="_summary.json",
-#         help="Filename for the summary JSON file (default: _summary.json)."
-#     )
-
-#     args = parser.parse_args()
-
-#     Path(args.out_root).mkdir(parents=True, exist_ok=True)
-#     main(args.root_dir, args.out_root)
-
-#     # Rename output files if custom names provided
-#     manifest_path = os.path.join(args.out_root, args.manifest_name)
-#     summary_path  = os.path.join(args.out_root, args.summary_name)
-#     if os.path.exists(os.path.join(args.out_root, "_manifest.json")):
-#         os.rename(os.path.join(args.out_root, "_manifest.json"), manifest_path)
-#     if os.path.exists(os.path.join(args.out_root, "_summary.json")):
-#         os.rename(os.path.join(args.out_root, "_summary.json"), summary_path)
 def pack_all_patients(root_dir, out_root, manifest_name="_manifest.json", summary_name="_summary.json"):
     """
     High-level wrapper: iterates over patient dirs, packs each into .npy,
