@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kidney-hfm-eval"
-version = "0.1.10"
+version = "0.1.11"
 description = "Evaluation framework for histopathology foundation models (HFMs) in kidney pathology"
 readme = "readme.md"
 requires-python = ">=3.9"
@@ -35,9 +35,10 @@ dependencies = [
     "fvcore",
     "iopath",
     "glob2",          
-    "joblib",        
+    "joblib",    
+    "onnx>=1.14",
+    "onnxruntime>=1.16",
 ]
-
 
 [project.urls]
 Homepage = "https://github.com/SarderLab/kidney_hfm_eval.git"
