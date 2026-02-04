@@ -36,7 +36,7 @@ dependencies = [
     "einops>=0.8",
     "fvcore",
     "iopath",
-    "vision-transformer"    
+    "vision-transformer",  
 ]
 
 [project.urls]
