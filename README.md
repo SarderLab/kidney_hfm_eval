@@ -207,7 +207,7 @@ BASE_MODEL_WEIGHT = "/path/to/weights"  # Path to model weights
 
 # Initialize device and registry
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-builders = model_builders_tile(DEVICE)
+builders = model_builders_tile(DEVICE, BASE_MODEL_WEIGHT)
 
 # Specify the models you want to extract features from
 selected_models = [
