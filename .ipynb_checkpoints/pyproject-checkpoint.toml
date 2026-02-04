@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kidney-hfm-eval"
-version = "0.1.6"
+version = "0.1.7"
 description = "Evaluation framework for histopathology foundation models (HFMs) in kidney pathology"
 readme = "readme.md"
 requires-python = ">=3.9"
