@@ -19,3 +19,5 @@ fvcore
 iopath
 glob2
 joblib
+onnx>=1.14
+onnxruntime>=1.16

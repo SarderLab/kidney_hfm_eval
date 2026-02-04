@@ -197,7 +197,7 @@ Once the model weights are in place, you can proceed with the feature extraction
 
 
 ```python
-from src.kidney_hfm_eval.Feature_Extraction.Extract_FE_tile import run_extraction_model_by_model, model_builders_tile
+from kidney_hfm_eval.Feature_Extraction.Extract_FE_tile import run_extraction_model_by_model, model_builders_tile
 import torch
 
 # Define input and output directories
@@ -293,8 +293,8 @@ Location where probe results (CSVs, plots, logs) will be saved.
 Create a script (e.g., `run_probes.py`) and insert:
 
 ```python
-from src.kidney_hfm_eval.Probing.linear_probing import run_linear_probe
-from src.kidney_hfm_eval.Probing.kNN_probing import run_kNN_probe
+from kidney_hfm_eval.Probing.linear_probing import run_linear_probe
+from kidney_hfm_eval.Probing.kNN_probing import run_kNN_probe
 
 # Paths
 csv_file = "/path/to/metadata.csv"        # Contains slide_id, label, group info
@@ -440,7 +440,7 @@ Where regression results will be saved.
 Create a script named `run_regression.py`:
 
 ```python
-from src.kidney_hfm_eval.Regression.linear_regression import run_regression_probe
+from kidney_hfm_eval.Regression.linear_regression import run_regression_probe
 
 # Paths (update these)
 emb_root = "/path/to/embeddings"
@@ -681,7 +681,7 @@ slide_id, group_id, label
 Create `make_folds.py`:
 
 ```python
-from src.kidney_hfm_eval.MIL_preprocessing.make_random_folds import generate_random_folds
+from kidney_hfm_eval.MIL_preprocessing.make_random_folds import generate_random_folds
 
 generate_random_folds(
     csv_path="/path/to/metadata.csv",
@@ -751,7 +751,7 @@ selected_models = [
 Create a script `pack_embeddings.py`:
 
 ```python
-from src.kidney_hfm_eval.MIL_preprocessing.pack_embeddings import pack_all_patients
+from kidney_hfm_eval.MIL_preprocessing.pack_embeddings import pack_all_patients
 
 selected_models = [
     "UNI", "UNI2-h", "Virchow", "Virchow2",
@@ -894,7 +894,7 @@ Where training logs for each model will be saved.
 Create a script named `run_mil_classification.py`:
 
 ```python
-from src.kidney_hfm_eval.ABMIL_classification.mil_classification import run_mil_pipeline
+from kidney_hfm_eval.ABMIL_classification.mil_classification import run_mil_pipeline
 
 args = {
     "root_dir": "/path/to/packed_embeddings",
@@ -1024,7 +1024,7 @@ These contain 1,000 bootstrap samples per model per metric.
 Create a file `run_statistical_analysis.py`:
 
 ```python
-from src.kidney_hfm_eval.Statistical_analysis.model_performance_comparison import run_replicate_pipeline
+from kidney_hfm_eval.Statistical_analysis.model_performance_comparison import run_replicate_pipeline
 
 classifiers = ["LR", "kNN"]                 # OR ["MIL"] or ["LR", "MIL"]
 metrics = ["mcc", "balanced_accuracy", "f1", "auroc", "recall"]  
@@ -1335,7 +1335,7 @@ Each `.pt` file contains a single PyTorch tensor corresponding to the feature em
 Create a Python script (e.g., `run_tile_extraction.py`) and insert the following:
 
 ```python
-from src.kidney_hfm_eval.Feature_Extraction.Extract_FE_tile import run_extraction_model_by_model, model_builders_tile
+from kidney_hfm_eval.Feature_Extraction.Extract_FE_tile import run_extraction_model_by_model, model_builders_tile
 import torch
 
 # Define input and output directories
@@ -1430,8 +1430,8 @@ Location where probe results (CSVs, plots, logs) will be saved.
 Create a script (e.g., `run_probes.py`) and insert:
 
 ```python
-from src.kidney_hfm_eval.Probing.linear_probing import run_linear_probe
-from src.kidney_hfm_eval.Probing.kNN_probing import run_kNN_probe
+from kidney_hfm_eval.Probing.linear_probing import run_linear_probe
+from kidney_hfm_eval.Probing.kNN_probing import run_kNN_probe
 
 # Paths
 csv_file = "/path/to/metadata.csv"        # Contains slide_id, label, group info
@@ -1577,7 +1577,7 @@ Where regression results will be saved.
 Create a script named `run_regression.py`:
 
 ```python
-from src.kidney_hfm_eval.Regression.linear_regression import run_regression_probe
+from kidney_hfm_eval.Regression.linear_regression import run_regression_probe
 
 # Paths (update these)
 emb_root = "/path/to/embeddings"
@@ -1818,7 +1818,7 @@ slide_id, group_id, label
 Create `make_folds.py`:
 
 ```python
-from src.kidney_hfm_eval.MIL_preprocessing.make_random_folds import generate_random_folds
+from kidney_hfm_eval.MIL_preprocessing.make_random_folds import generate_random_folds
 
 generate_random_folds(
     csv_path="/path/to/metadata.csv",
@@ -1888,7 +1888,7 @@ selected_models = [
 Create a script `pack_embeddings.py`:
 
 ```python
-from src.kidney_hfm_eval.MIL_preprocessing.pack_embeddings import pack_all_patients
+from kidney_hfm_eval.MIL_preprocessing.pack_embeddings import pack_all_patients
 
 selected_models = [
     "UNI", "UNI2-h", "Virchow", "Virchow2",
@@ -2031,7 +2031,7 @@ Where training logs for each model will be saved.
 Create a script named `run_mil_classification.py`:
 
 ```python
-from src.kidney_hfm_eval.ABMIL_classification.mil_classification import run_mil_pipeline
+from kidney_hfm_eval.ABMIL_classification.mil_classification import run_mil_pipeline
 
 args = {
     "root_dir": "/path/to/packed_embeddings",
@@ -2161,7 +2161,7 @@ These contain 1,000 bootstrap samples per model per metric.
 Create a file `run_statistical_analysis.py`:
 
 ```python
-from src.kidney_hfm_eval.Statistical_analysis.model_performance_comparison import run_replicate_pipeline
+from kidney_hfm_eval.Statistical_analysis.model_performance_comparison import run_replicate_pipeline
 
 classifiers = ["LR", "kNN"]                 # OR ["MIL"] or ["LR", "MIL"]
 metrics = ["mcc", "balanced_accuracy", "f1", "auroc", "recall"]  
