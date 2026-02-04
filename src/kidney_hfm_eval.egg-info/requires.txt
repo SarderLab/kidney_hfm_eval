@@ -11,12 +11,11 @@ Pillow>=10.0
 tifffile
 tiffslide
 imageio
-scikit-image
-pyvips
 timm>=1.0.0
 transformers>=4.36
 huggingface-hub>=0.20
 einops>=0.8
 fvcore
 iopath
-vision-transformer
+glob2
+joblib

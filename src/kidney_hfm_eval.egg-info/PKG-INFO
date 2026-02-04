@@ -21,15 +21,14 @@ Requires-Dist: Pillow>=10.0
 Requires-Dist: tifffile
 Requires-Dist: tiffslide
 Requires-Dist: imageio
-Requires-Dist: scikit-image
-Requires-Dist: pyvips
 Requires-Dist: timm>=1.0.0
 Requires-Dist: transformers>=4.36
 Requires-Dist: huggingface-hub>=0.20
 Requires-Dist: einops>=0.8
 Requires-Dist: fvcore
 Requires-Dist: iopath
-Requires-Dist: vision-transformer
+Requires-Dist: glob2
+Requires-Dist: joblib
 Dynamic: license-file
 
 ## Validation of Histopathology Foundation Models (Hist_FMs)
