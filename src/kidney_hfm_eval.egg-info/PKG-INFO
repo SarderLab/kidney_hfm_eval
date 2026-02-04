@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: kidney-hfm-eval
-Version: 0.1.4
+Version: 0.1.5
 Summary: Evaluation framework for histopathology foundation models (HFMs) in kidney pathology
 Author-email: Harishwar Reddy Kasireddy <harishwarreddy.k@ufl.edu>
 License: MIT
@@ -18,22 +18,18 @@ Requires-Dist: tqdm>=4.66
 Requires-Dist: matplotlib>=3.7
 Requires-Dist: seaborn>=0.13
 Requires-Dist: Pillow>=10.0
-Provides-Extra: wsi
-Requires-Dist: tifffile; extra == "wsi"
-Requires-Dist: tiffslide; extra == "wsi"
-Requires-Dist: imageio; extra == "wsi"
-Requires-Dist: scikit-image; extra == "wsi"
-Requires-Dist: pyvips; extra == "wsi"
-Provides-Extra: fms
-Requires-Dist: timm>=1.0.0; extra == "fms"
-Requires-Dist: transformers>=4.36; extra == "fms"
-Requires-Dist: huggingface-hub>=0.20; extra == "fms"
-Requires-Dist: einops>=0.8; extra == "fms"
-Requires-Dist: fvcore; extra == "fms"
-Requires-Dist: iopath; extra == "fms"
-Requires-Dist: gigapath; extra == "fms"
-Requires-Dist: UNI; extra == "fms"
-Requires-Dist: vision-transformer; extra == "fms"
+Requires-Dist: tifffile
+Requires-Dist: tiffslide
+Requires-Dist: imageio
+Requires-Dist: scikit-image
+Requires-Dist: pyvips
+Requires-Dist: timm>=1.0.0
+Requires-Dist: transformers>=4.36
+Requires-Dist: huggingface-hub>=0.20
+Requires-Dist: einops>=0.8
+Requires-Dist: fvcore
+Requires-Dist: iopath
+Requires-Dist: vision-transformer
 Dynamic: license-file
 
 ## Validation of Histopathology Foundation Models (Hist_FMs)
