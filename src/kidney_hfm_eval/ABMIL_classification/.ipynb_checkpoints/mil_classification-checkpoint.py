@@ -213,6 +213,19 @@ def log_outer_epoch_cls(log_file, seed, outer_fold_idx, epoch, train_loss, tm, h
 def run_mil_pipeline(args):
     if isinstance(args, dict):
         args = argparse.Namespace(**args)
+    defaults = {
+        "dropout": 0.6,
+        "weight_decay": 0.01,
+        "patience": 10,
+        "epochs": 50,
+        "inner_folds": 4,
+        "bootstrap": 1000,
+        "tune_params": "lr,M,L",
+    }
+
+    for k, v in defaults.items():
+        if not hasattr(args, k):
+            setattr(args, k, v)
     args.cuda = torch.cuda.is_available()
     fm_names = args.models
 
@@ -244,12 +257,13 @@ def run_mil_pipeline(args):
         assert set(labels).issubset(set(range(C))), "Labels must be in [0, C-1]"
 
         default_params = {
-            "dropout": 0.6,
-            "weight_decay": 0.01,
+            "dropout": args.dropout,
+            "weight_decay": args.weight_decay,
             "lr": 5e-4,
             "epochs": args.epochs,
             "M": 512,
             "L": 256,
+            "patience": args.patience,
         }
 
         full_param_grid = {
@@ -309,7 +323,7 @@ def run_mil_pipeline(args):
                 random.seed(seed + worker_id)
 
             for fold_idx, indices in enumerate(fold_indices, 1):
-                trainval_ids = indices["trainval"]  # list of strings like "K1300468"
+                trainval_ids = indices["trainval"] 
                 test_ids     = indices["test"]
 
                 tv_p = [str(x).strip() for x in trainval_ids]
@@ -606,12 +620,14 @@ def main():
     parser.add_argument('--csv_path', required=True)
     parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--patience', type=int, default=20)
     # parser.add_argument('--tol', type=float, default=0.0001)
     parser.add_argument('--inner_folds', type=int, default=4)
     parser.add_argument('--bootstrap', type=int, default=1000)
     parser.add_argument('--outer_fold', required=True)
     parser.add_argument('--log_file_path', required=True)
+    parser.add_argument("--dropout", type=float, default=0.6)
+    parser.add_argument("--weight_decay", type=float, default=0.01)
+    parser.add_argument("--patience", type=int, default=10)
     parser.add_argument('--models', nargs="+", default=[
         "UNI", "UNI2-h", "Virchow", "Virchow2",
         "SP22M", "SP85M", "H-optimus-0", "H-optimus-1", "Hibou-B", "Hibou-L", "Prov-Gigapath"

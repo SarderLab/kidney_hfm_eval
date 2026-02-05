@@ -1,7 +1,6 @@
 LICENSE
 README.md
 pyproject.toml
-readme.md
 src/__init__.py
 src/kidney_hfm_eval/__init__.py
 src/kidney_hfm_eval.egg-info/PKG-INFO

@@ -187,7 +187,7 @@ def run_cross_validation(X, y, groups, sample_ids, classes, seeds=(0,1,2), n_spl
             lr_m, y_true_lr, y_prob_lr = evaluate_logistic(
                 X_tr_s, y_tr, X_te_s, y_te, classes
             )
-            print(y_true_lr.shape, "y_true_lr", y_prob_lr.shape, "y_prob_lr")
+            # print(y_true_lr.shape, "y_true_lr", y_prob_lr.shape, "y_prob_lr")
             records.append({
                 **lr_m,
                 "Model": "LogisticRegression",
@@ -222,12 +222,12 @@ def run_bootstrap(fold_results, classes, B=1000, seed=0, sample_frac=None):
             grp_map[sampleid].append((yt, yp))
     all_ids = list(grp_map.keys())
     counts = [len(v) for v in grp_map.values()]
-    print("Tiles with 1 prediction:", counts.count(1))
-    print("Tiles with 2 predictions:", counts.count(2))
-    print("Tiles with 3 predictions:", counts.count(3))
-    print("Total predictions:", sum(counts))
+    # print("Tiles with 1 prediction:", counts.count(1))
+    # print("Tiles with 2 predictions:", counts.count(2))
+    # print("Tiles with 3 predictions:", counts.count(3))
+    # print("Total predictions:", sum(counts))
     print("Dataset size (#unique tiles):", len(counts))
-    print("Average predictions per tile:", sum(counts) / len(counts))
+    # print("Average predictions per tile:", sum(counts) / len(counts))
     print("=============================================")
 
     # 2) sample_size
@@ -295,7 +295,7 @@ def run_linear_probe(csv_file, emb_root, out_dir, models=None, n_splits=5, seeds
         boot_df, ci_summary = run_bootstrap(fold_results, classes, B=bootstrap, seed=1)
         boot_df.to_csv(os.path.join(fm_outdir, f"bootstrap_replicates_LR_{fm}.csv"), index=False)
         ci_summary.to_csv(os.path.join(fm_outdir, f"bootstrap_CI_LR_{fm}.csv"))
-        print(f"✅ Saved results for {fm}")
+        print(f" Saved results for {fm}")
 
 
 if __name__ == "__main__":

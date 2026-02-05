@@ -297,7 +297,7 @@ def run_kNN_probe(csv_file, emb_root, out_dir, models=None, n_splits=5, seeds=(0
         boot_df, ci_summary = run_bootstrap(fold_results, classes, B=bootstrap, seed=1)
         boot_df.to_csv(boot_path, index=False)
         ci_summary.to_csv(ci_path)
-        print(f"✅ Saved results for {fm} → {cv_path}, {boot_path}, {ci_path}")
+        print(f" Saved results for {fm} → {cv_path}, {boot_path}, {ci_path}")
 
 
         

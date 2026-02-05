@@ -32,7 +32,7 @@ def generate_random_folds(csv_path, seeds, n_splits, out_path):
             test_idx = folds[i]
             trainval_idx = np.concatenate([folds[j] for j in range(n_splits) if j != i]) if n_splits > 1 else np.array([], dtype=int)
 
-            # ✅ Map index positions to actual IDs
+            # Map index positions to actual IDs
             seed_folds.append({
                 "trainval": df.loc[trainval_idx, "ID"].tolist(),
                 "test": df.loc[test_idx, "ID"].tolist()
@@ -44,7 +44,7 @@ def generate_random_folds(csv_path, seeds, n_splits, out_path):
     with open(out_path, "w") as f:
         json.dump(all_splits, f, indent=2)
 
-    print(f"✅ Saved random {n_splits}-fold indices for seeds {seeds} → {out_path}")
+    print(f" Saved random {n_splits}-fold indices for seeds {seeds} → {out_path}")
 
 
 if __name__ == "__main__":

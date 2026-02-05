@@ -113,9 +113,16 @@ pip install -r requirements.txt
 
 ### Pypi based Installation
 
+
 ```bash
+# We suggest creating a new conda environment for installing this package to avoid conflicts with existing python packages 
+# Conda command to create new conda environment
+conda create --name myenv -p path/to/environment python==3.10
+
 # Clone the repository
-pip install --no-cache-dir kidney-hfm-eval==0.1.12
+pip install --no-cache-dir kidney-hfm-eval==latest_version
+E.g., pip install --no-cache-dir kidney-hfm-eval==0.1.13
+
 import kidney_hfm_eval
 ```
 
@@ -669,12 +676,11 @@ This ensures balanced folds, and reproducible seeds.
 Your CSV (`csv_path`) must include:
 
 ```
-slide_id, group_id, label
+ID, class or value
 ```
 
-* `slide_id`: unique slide name
-* `group_id`: patient-level grouping (ensures no leakage)
-* `label`: class label
+* `ID`: unique slide name
+* `class`: class label (Classification) (e.g., 0,1 for binary classification) or * `value`: target value (e.g.,: eGFR) (Regression)
 
 ### **Example Script**
 
@@ -687,7 +693,7 @@ generate_random_folds(
     csv_path="/path/to/metadata.csv",
     seeds=[0, 1, 2],    # reproducible 3-seed split generation
     n_splits=5,         # 5-fold StratifiedGroupKFold
-    out_path="/path/to/output/folds.json"
+    out_path="/path/to/output/folds_IDs.json"
 )
 ```
 
@@ -899,23 +905,23 @@ from kidney_hfm_eval.ABMIL_classification.mil_classification import run_mil_pipe
 args = {
     "root_dir": "/path/to/packed_embeddings",
     "csv_path": "/path/to/metadata.csv",
-    "outer_fold": "/path/to/folds.json",
+    "outer_fold": "/path/to/folds_IDs.json",
     "log_file_path": "/path/to/training_logs.txt",
 
-    # Hyperparameters to tune
+    # Hyperparameters 
     "tune_params": "lr,M,L",
     "epochs": 50,
     "patience": 10,
     "inner_folds": 4,   # nested CV inside each outer fold
     "seed": 0,
     "bootstrap": 1000,
-    "num_classes": 2,
     "models": [
         "UNI", "UNI2-h", "Virchow", "Virchow2",
         "SP22M", "SP85M", "H-optimus-0", "H-optimus-1",
         "Hibou-B", "Hibou-L", "Prov-Gigapath"
     ],
-    "num_classes": 2,
+    "dropout": 0.6,
+    "weight_decay": 0.01,
 }
 
 # Run ABMIL pipeline
@@ -1026,7 +1032,7 @@ Create a file `run_statistical_analysis.py`:
 ```python
 from kidney_hfm_eval.Statistical_analysis.model_performance_comparison import run_replicate_pipeline
 
-classifiers = ["LR", "kNN"]                 # OR ["MIL"] or ["LR", "MIL"]
+classifiers = ["LR", "kNN"]                 # OR ["MIL"] or ["LR", "kNN"]
 metrics = ["mcc", "balanced_accuracy", "f1", "auroc", "recall"]  
 # For regression tasks use:
 # metrics = ["pearson_r", "r2", "mae", "rmse", "mape"]
@@ -1045,7 +1051,7 @@ for clf in classifiers:
     for metric in metrics:
         args = {
             "repl_glob": f"{base_dir}/*/bootstrap_replicates_{clf}_*.csv",
-            "save_dir": f"{base_dir}/Visualization_results/{clf}_{metric.upper()}",
+            "save_dir": f"{base_dir}/Statistics_visualization/{clf}_{metric.upper()}",
             "models": models,
             "alpha": 0.05,
             "verbose": True,
@@ -2037,22 +2043,22 @@ args = {
     "root_dir": "/path/to/packed_embeddings",
     "csv_path": "/path/to/metadata.csv",
     "outer_fold": "/path/to/folds.json",
-    "log_file_path": "/path/to/training_logs.txt",
+    "log_file_path": "/path/to/results_dir",
 
     # Hyperparameters to tune
     "tune_params": "lr,M,L",
     "epochs": 50,
-    "patience": 10,
     "inner_folds": 4,   # nested CV inside each outer fold
     "seed": 0,
     "bootstrap": 1000,
-    "num_classes": 2,
     "models": [
         "UNI", "UNI2-h", "Virchow", "Virchow2",
         "SP22M", "SP85M", "H-optimus-0", "H-optimus-1",
         "Hibou-B", "Hibou-L", "Prov-Gigapath"
     ],
-    "num_classes": 2,
+    "patience": 10,
+    "dropout": 0.6,
+    "weight_decay": 0.01,
 }
 
 # Run ABMIL pipeline
@@ -2110,6 +2116,15 @@ Contains:
 
 ---
 
+# ABMIL Regression Pipeline
+
+** ABMIL regression can be performeed using the same strategy as used for ABMIL classification, with a during the import as follows. **
+
+```python
+
+from ABMIL_regression.mil_regression import run_mil_pipeline
+
+```
 # Statistical Analysis: Model Performance Comparison
 
 This module performs formal statistical comparison across all HFMs using the bootstrap replicate files produced from:
@@ -2163,7 +2178,8 @@ Create a file `run_statistical_analysis.py`:
 ```python
 from kidney_hfm_eval.Statistical_analysis.model_performance_comparison import run_replicate_pipeline
 
-classifiers = ["LR", "kNN"]                 # OR ["MIL"] or ["LR", "MIL"]
+classifiers = ["LR", "kNN"]                 # OR ["MIL"] for slide-lvel classificaiton/regression OR ["LR", "kNN"] for tile level classification OR ["LR"] for tile level regression
+# For classification tasks use:
 metrics = ["mcc", "balanced_accuracy", "f1", "auroc", "recall"]  
 # For regression tasks use:
 # metrics = ["pearson_r", "r2", "mae", "rmse", "mape"]

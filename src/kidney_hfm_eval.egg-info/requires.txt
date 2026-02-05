@@ -12,7 +12,7 @@ tifffile
 tiffslide
 imageio
 timm>=1.0.0
-transformers>=4.36
+transformers==4.39.3
 huggingface-hub>=0.20
 einops>=0.8
 fvcore
@@ -21,3 +21,4 @@ glob2
 joblib
 onnx>=1.14
 onnxruntime>=1.16
+statsmodels==0.14.5

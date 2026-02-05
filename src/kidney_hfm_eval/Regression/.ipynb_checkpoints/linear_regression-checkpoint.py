@@ -182,7 +182,7 @@ def run_bootstrap_regression(fold_results, B=1000, seed=0):
             sample_map[sid].append((yt, yp))
     all_ids = list(sample_map.keys())
     sample_size = len(fold_results[0]["sample_ids"])
-    print(f"\n Bootstrap: {len(all_ids)} unique samples, sample_size={sample_size}, B={B}")
+    print(f"\n Bootstrap: {len(all_ids)} unique samples, B={B}")
 
     rng = np.random.default_rng(seed)
     boot_recs = []
@@ -285,7 +285,7 @@ def run_regression_probe(
         # --- Save CV results ---
         out_cv = os.path.join(fm_outdir, f"cv_results_LR_{fm}.csv")
         cv_df.to_csv(out_cv, index=False)
-        print(f"✅ Saved regression CV results → {out_cv}")
+        print(f" Saved regression CV results → {out_cv}")
 
         # --- Run bootstrapping ---
         boot_df, ci_summary = run_bootstrap_regression(
@@ -297,7 +297,7 @@ def run_regression_probe(
         out_ci   = os.path.join(fm_outdir, f"bootstrap_CI_LR_{fm}.csv")
         boot_df.to_csv(out_boot, index=False)
         ci_summary.to_csv(out_ci)
-        print(f"✅ Saved bootstrap results → {out_boot}, {out_ci}")
+        print(f" Saved bootstrap results → {out_boot}, {out_ci}")
 
 
 if __name__ == "__main__":

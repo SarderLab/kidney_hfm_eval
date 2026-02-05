@@ -198,6 +198,19 @@ def log_outer_epoch(log_file, seed, outer_fold_idx, epoch, train_loss, tm, hp_di
 def run_mil_pipeline(args):
     if isinstance(args, dict):
         args = argparse.Namespace(**args)
+    defaults = {
+        "dropout": 0.6,
+        "weight_decay": 0.01,
+        "patience": 10,
+        "epochs": 50,
+        "inner_folds": 4,
+        "bootstrap": 1000,
+        "tune_params": "lr,M,L",
+    }
+    for k, v in defaults.items():
+        if not hasattr(args, k):
+            setattr(args, k, v)
+
     args.cuda = torch.cuda.is_available()
     fm_names = args.models
 
@@ -534,6 +547,10 @@ def main():
     parser.add_argument("--bootstrap", type=int, default=1000, help="Number of bootstrap replicates")
     parser.add_argument("--outer_fold", required=True, help="path to json file containing the fold indices")
     parser.add_argument('--log_file_path', required=True)
+    parser.add_argument("--dropout", type=float, default=0.6)
+    parser.add_argument("--weight_decay", type=float, default=0.01)
+    parser.add_argument("--patience", type=int, default=10)
+
     parser.add_argument('--models', nargs="+", default=[
         "UNI", "UNI2-h", "Virchow", "Virchow2",
         "SP22M", "SP85M", "H-optimus-0", "H-optimus-1", "Hibou-B", "Hibou-L", "Prov-Gigapath"
