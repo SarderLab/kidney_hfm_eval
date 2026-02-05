@@ -1,10 +1,11 @@
 Metadata-Version: 2.4
 Name: kidney-hfm-eval
-Version: 0.1.14
+Version: 0.1.15
 Summary: Evaluation framework for histopathology foundation models (HFMs) in kidney pathology
 Author-email: Harishwar Reddy Kasireddy <harishwarreddy.k@ufl.edu>
 License: MIT
 Project-URL: Homepage, https://github.com/SarderLab/kidney_hfm_eval.git
+Project-URL: DOI, https://doi.org/10.5281/zenodo.18394932
 Requires-Python: >=3.9
 Description-Content-Type: text/markdown
 License-File: LICENSE
