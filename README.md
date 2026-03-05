@@ -216,8 +216,8 @@ Example:
 
 ```text
 /path/to/model_weights/
-├── Hibou-B/                 # (folder, if Hibou is distributed as a directory)
-├── Hibou-L/                 # (folder, if Hibou is distributed as a directory)
+├── Hibou-B/                 # (folder)
+├── Hibou-L/                 # (folder)
 ├── H-optimus-0.bin
 ├── H-optimus-1.bin
 ├── prov-gigapath.bin
