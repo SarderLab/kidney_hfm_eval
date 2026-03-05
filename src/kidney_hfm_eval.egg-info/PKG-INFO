@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: kidney-hfm-eval
-Version: 0.1.16
+Version: 0.1.21
 Summary: Evaluation framework for histopathology foundation models (HFMs) in kidney pathology
 Author-email: Harishwar Reddy Kasireddy <harishwarreddy.k@ufl.edu>
 License: MIT
@@ -234,6 +234,45 @@ Each `.pt` file contains a single PyTorch tensor corresponding to the feature em
 **Step 1:** Download Model Weights
 
 Before running the feature extraction script, you must download the model weights. Place the downloaded weights in a directory on your system (e.g., /path/to/weights).
+
+---
+
+## Model Weights (Required)
+
+This repository **does not ship pretrained weights**. You must **download model weights from Hugging Face** and place them in a single directory. Then, you will pass that directory path to the code via `BASE_MODEL_WEIGHT`.
+
+### Download weights from Hugging Face
+
+Download the required weights for the models you plan to use (UNI, Virchow, Hibou, H-optimus, SP22M/SP85M, Prov-Gigapath, etc.) from Hugging Face and save them locally.
+
+### Expected directory layout
+
+All weights should live inside **one directory**, and your code will receive that directory path.
+
+Example:
+
+```text
+/path/to/model_weights/
+├── Hibou-B/                 # (folder)
+├── Hibou-L/                 # (folder)
+├── H-optimus-0.bin
+├── H-optimus-1.bin
+├── prov-gigapath.bin
+├── SP22M.bin
+├── SP85M.bin
+├── UNI.bin
+├── UNI2.bin
+├── Virchow.bin
+└── Virchow2.bin
+```
+
+**Screenshot example (your directory should look like this):**
+
+![Model weights directory structure](directory.png)
+
+> If your filenames differ from the ones expected in the code (e.g., different extensions or naming), rename them to match the expected names or update the corresponding loader in `model_builders.py`.
+
+---
 
 **Step 2:** Feature Extraction Script
 
