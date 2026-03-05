@@ -7,6 +7,34 @@ from scipy.stats import wilcoxon, friedmanchisquare
 from statsmodels.stats.multitest import multipletests
 from itertools import combinations
 
+
+# ----------------------------------------------------
+# Paper-ready plotting style
+# ----------------------------------------------------
+PAPER_STYLE = {
+    "title": 22,        
+    "label": 22,        # 20
+    "tick": 20,         # 16
+    "legend_title": 22,
+    "legend_text": 20,
+    "cld": 20,          # 18
+    "heat_annot": 12,   # 12
+}
+
+def set_paper_rc(style=PAPER_STYLE):
+    plt.rcParams.update({
+        "figure.dpi": 300,
+        "savefig.dpi": 600,          # better for subfigures
+        "font.size": style["tick"],  # base
+        "axes.titlesize": style["title"],
+        "axes.labelsize": style["label"],
+        "xtick.labelsize": style["tick"],
+        "ytick.labelsize": style["tick"],
+        "legend.fontsize": style["legend_text"],
+        "legend.title_fontsize": style["legend_title"],
+        "pdf.fonttype": 42,          # editable text in Illustrator
+        "ps.fonttype": 42,
+    })
 # ----------------------------------------------------
 # Configuration
 # ----------------------------------------------------
@@ -139,7 +167,11 @@ def plot_box_ungrouped(series_map, models, metric_name="MCC", save_dir=None, suf
         boxprops={"linewidth": 1.8},
         medianprops={"linewidth": 2.2, "color": "black"},
     )
-
+    ax.set_title("Model Performance with CLD-Based Grouping and Ranking", fontsize=PAPER_STYLE["title"])
+    ax.set_xlabel("Model", fontsize=PAPER_STYLE["label"])
+    ax.set_ylabel(metric_name, fontsize=PAPER_STYLE["label"])
+    ax.tick_params(axis="x", labelsize=PAPER_STYLE["tick"])
+    ax.tick_params(axis="y", labelsize=PAPER_STYLE["tick"])
     # ---- Add Legend ----
     handles = [plt.Line2D([0], [0], color=MODEL_COLORS[m], lw=8) for m in models]
     ax.legend(handles, models, title="Models", bbox_to_anchor=(1.02, 1), loc="upper left")
@@ -173,8 +205,11 @@ def plot_violin_ungrouped(series_map, models, metric_name="MCC", save_dir=None, 
         saturation=1.0,
         alpha=0.9
     )
-
-    # ---- Add Legend ----
+    ax.set_title(f"{metric_name} – Ungrouped Violin Plot", fontsize=PAPER_STYLE["title"])
+    ax.set_xlabel("Model", fontsize=PAPER_STYLE["label"])
+    ax.set_ylabel(metric_name, fontsize=PAPER_STYLE["label"])
+    ax.tick_params(axis="x", labelsize=PAPER_STYLE["tick"])
+    ax.tick_params(axis="y", labelsize=PAPER_STYLE["tick"])    # ---- Add Legend ----
     handles = [plt.Line2D([0], [0], color=MODEL_COLORS[m], lw=8) for m in models]
     ax.legend(handles, models, title="Models", bbox_to_anchor=(1.02, 1), loc="upper left")
 
@@ -213,15 +248,17 @@ def plot_box_grouped(series_map, models, cld_map, metric_name="MCC",
         boxprops={"linewidth": 1.8},
         medianprops={"linewidth": 2.2, "color": "black"},
     )
-
-    # ---- Add CLD letters above each model ----
+    ax.set_title("Model Performance with CLD-Based Grouping and Ranking", fontsize=PAPER_STYLE["title"])
+    ax.set_xlabel("Model", fontsize=PAPER_STYLE["label"])
+    ax.set_ylabel(metric_name, fontsize=PAPER_STYLE["label"])
+    ax.tick_params(axis="x", labelsize=PAPER_STYLE["tick"])
+    ax.tick_params(axis="y", labelsize=PAPER_STYLE["tick"])    # ---- Add CLD letters above each model ----
     ymin, ymax = ax.get_ylim()
     ypos = ymax + 0.05 * (ymax - ymin)
 
     for i, m in enumerate(sorted_models):
         ax.text(i, ypos, cld_map[m], ha="center",
-                fontsize=14, fontweight="bold")
-
+                fontsize=PAPER_STYLE["cld"], fontweight="bold")
     # ---- Expand y-limit to ensure visibility ----
     ax.set_ylim(ymin, ymax + 0.10 * (ymax - ymin))
 
@@ -260,15 +297,18 @@ def plot_violin_grouped(series_map, models, cld_map, metric_name="MCC",
         alpha=0.9,
         linewidth=1.5
     )
-
+    ax.set_title(f"{metric_name} – Ungrouped Violin Plot", fontsize=PAPER_STYLE["title"])
+    ax.set_xlabel("Model", fontsize=PAPER_STYLE["label"])
+    ax.set_ylabel(metric_name, fontsize=PAPER_STYLE["label"])
+    ax.tick_params(axis="x", labelsize=PAPER_STYLE["tick"])
+    ax.tick_params(axis="y", labelsize=PAPER_STYLE["tick"])    
     # ---- Add CLD letters above each model ----
     ymin, ymax = ax.get_ylim()
     ypos = ymax + 0.05 * (ymax - ymin)
 
     for i, m in enumerate(sorted_models):
         ax.text(i, ypos, cld_map[m], ha="center",
-                fontsize=14, fontweight="bold")
-
+                fontsize=PAPER_STYLE["cld"], fontweight="bold")
     # ---- Expand y-limit to ensure visibility ----
     ax.set_ylim(ymin, ymax + 0.10 * (ymax - ymin))
 
@@ -307,12 +347,21 @@ def ensure_dir(path):
     os.makedirs(path, exist_ok=True)
 
 
+# def save_plot(save_dir, filename, dpi=300):
+#     """Save current matplotlib figure to directory."""
+#     if save_dir:
+#         full_path = os.path.join(save_dir, filename)
+#         plt.savefig(full_path, bbox_inches="tight", dpi=dpi)
+#         print(f" Saved figure: {full_path}")
 def save_plot(save_dir, filename, dpi=300):
-    """Save current matplotlib figure to directory."""
     if save_dir:
         full_path = os.path.join(save_dir, filename)
         plt.savefig(full_path, bbox_inches="tight", dpi=dpi)
         print(f" Saved figure: {full_path}")
+
+        # also save vector
+        base, _ = os.path.splitext(full_path)
+        plt.savefig(base + ".pdf", bbox_inches="tight")
 
 
 def load_replicate_series(repl_glob, metric="mcc"):
@@ -369,10 +418,14 @@ def plot_summary(summary_df, save_dir=None, metric_name="MCC", suffix=""):
     )
 
     # Decorate
-    plt.ylabel(metric_name, fontsize=16)
-    plt.xlabel("Model", fontsize=16)
-    plt.title(f"Mean {metric_name} per Model (95% CI)", fontsize=18)
-    plt.xticks(rotation=45, ha="right", fontsize=12)
+    # plt.ylabel(metric_name, fontsize=16)
+    # plt.xlabel("Model", fontsize=16)
+    # plt.title(f"Mean {metric_name} per Model (95% CI)", fontsize=18)
+    # plt.xticks(rotation=45, ha="right", fontsize=12)
+    plt.ylabel(metric_name, fontsize=PAPER_STYLE["label"])
+    plt.xlabel("Model", fontsize=PAPER_STYLE["label"])
+    plt.title(f"Mean {metric_name} per Model (95% CI)", fontsize=PAPER_STYLE["title"])
+    plt.xticks(rotation=45, ha="right", fontsize=PAPER_STYLE["tick"])
     plt.tight_layout()
 
     # Save and close
@@ -397,7 +450,7 @@ def plot_violin(series_map, models, save_dir=None, metric_name="MCC", suffix="")
     save_plot(save_dir, f"violin_{metric_name}_distribution{suffix}.png")
     plt.show()
 
-
+        
 def run_wilcoxon_posthoc(df_paired, models, alpha=0.05, save_dir=None, metric_name="MCC", suffix=""):
     """Run Friedman + Wilcoxon + Holm correction and plot heatmaps."""
     k = len(models)
@@ -440,24 +493,117 @@ def run_wilcoxon_posthoc(df_paired, models, alpha=0.05, save_dir=None, metric_na
     np.fill_diagonal(p_holm.values, 0)
 
     # --- Raw p-value heatmap ---
+#     plt.figure(figsize=(10, 8))
+#     # sns.heatmap(p_raw, annot=True, fmt=".3f", cmap="viridis_r",
+#     #             xticklabels=models, yticklabels=models,
+#     #             cbar_kws={'label': 'Raw p-value'})
+#     ax = sns.heatmap(
+#         p_raw,
+#         annot=True,
+#         fmt=".3f",
+#         cmap="viridis_r",
+#         xticklabels=models,
+#         yticklabels=models,
+#         cbar_kws={'label': 'Raw p-value'},
+#         annot_kws={"size": PAPER_STYLE["heat_annot"]}  # <- key line
+#     )
+
+#     ax.set_title("Pairwise Wilcoxon signed-rank (Raw p-values)", fontsize=PAPER_STYLE["title"])
+#     ax.set_xlabel("", fontsize=PAPER_STYLE["label"])
+#     ax.set_ylabel("", fontsize=PAPER_STYLE["label"])
+#     ax.tick_params(axis="x", labelsize=PAPER_STYLE["tick"])
+#     ax.tick_params(axis="y", labelsize=PAPER_STYLE["tick"])
+#     plt.xticks(rotation=45, ha="right")
+    
+#     plt.title("Pairwise Wilcoxon signed-rank (Raw p-values)", fontsize=18)
+#     plt.xticks(rotation=45, ha="right")
+#     plt.tight_layout()
+
     plt.figure(figsize=(10, 8))
-    sns.heatmap(p_raw, annot=True, fmt=".3f", cmap="viridis_r",
-                xticklabels=models, yticklabels=models,
-                cbar_kws={'label': 'Raw p-value'})
-    plt.title("Pairwise Wilcoxon signed-rank (Raw p-values)", fontsize=18)
+
+    ax = sns.heatmap(
+        p_raw,
+        annot=True,
+        fmt=".3f",
+        cmap="viridis_r",
+        xticklabels=models,
+        yticklabels=models,
+        cbar_kws={'label': 'Raw p-value'},
+        annot_kws={"size": PAPER_STYLE["heat_annot"]}
+    )
+
+    # Increase tick sizes
+    ax.tick_params(axis="x", labelsize=PAPER_STYLE["tick"])
+    ax.tick_params(axis="y", labelsize=PAPER_STYLE["tick"])
+
+    # THIS is where you add the colorbar formatting
+    cbar = ax.collections[0].colorbar
+    cbar.ax.tick_params(labelsize=PAPER_STYLE["tick"])
+    cbar.set_label("Raw p-value", fontsize=PAPER_STYLE["label"])
+
+    plt.title("Pairwise Wilcoxon signed-rank (Raw p-values)",
+              fontsize=PAPER_STYLE["title"])
     plt.xticks(rotation=45, ha="right")
+
     plt.tight_layout()
+
     save_plot(save_dir, f"wilcoxon_raw_pvalues_{metric_name}_{suffix}.png")
     plt.show()
 
     # --- Holm–Bonferroni adjusted p-value heatmap ---
+#     plt.figure(figsize=(10, 8))
+#     # sns.heatmap(p_holm, annot=True, fmt=".3f", cmap="viridis_r",
+#     #             xticklabels=models, yticklabels=models,
+#     #             cbar_kws={'label': 'Holm-adjusted p-value'})
+#     ax = sns.heatmap(
+#         p_raw,
+#         annot=True,
+#         fmt=".3f",
+#         cmap="viridis_r",
+#         xticklabels=models,
+#         yticklabels=models,
+#         cbar_kws={'label': 'Raw p-value'},
+#         annot_kws={"size": PAPER_STYLE["heat_annot"]}  # <- key line
+#     )
+
+#     ax.set_title("Pairwise Wilcoxon signed-rank (Raw p-values)", fontsize=PAPER_STYLE["title"])
+#     ax.set_xlabel("", fontsize=PAPER_STYLE["label"])
+#     ax.set_ylabel("", fontsize=PAPER_STYLE["label"])
+#     ax.tick_params(axis="x", labelsize=PAPER_STYLE["tick"])
+#     ax.tick_params(axis="y", labelsize=PAPER_STYLE["tick"])
+#     plt.xticks(rotation=45, ha="right")
+    
+#     plt.title("Pairwise Wilcoxon signed-rank (Holm–Bonferroni corrected)", fontsize=18)
+#     plt.xticks(rotation=45, ha="right")
+#     plt.tight_layout()
     plt.figure(figsize=(10, 8))
-    sns.heatmap(p_holm, annot=True, fmt=".3f", cmap="viridis_r",
-                xticklabels=models, yticklabels=models,
-                cbar_kws={'label': 'Holm-adjusted p-value'})
-    plt.title("Pairwise Wilcoxon signed-rank (Holm–Bonferroni corrected)", fontsize=18)
+
+    ax = sns.heatmap(
+        p_holm,
+        annot=True,
+        fmt=".3f",
+        cmap="viridis_r",
+        xticklabels=models,
+        yticklabels=models,
+        cbar_kws={'label': 'Holm-adjusted p-value'},
+        annot_kws={"size": PAPER_STYLE["heat_annot"]}
+    )
+
+    ax.tick_params(axis="x", labelsize=PAPER_STYLE["tick"])
+    ax.tick_params(axis="y", labelsize=PAPER_STYLE["tick"])
+
+    # Add colorbar formatting here too
+    cbar = ax.collections[0].colorbar
+    cbar.ax.tick_params(labelsize=PAPER_STYLE["tick"])
+    cbar.set_label("Holm-adjusted p-value",
+                   fontsize=PAPER_STYLE["label"])
+
+    plt.title("Pairwise Wilcoxon signed-rank (Holm–Bonferroni corrected)",
+              fontsize=PAPER_STYLE["title"])
     plt.xticks(rotation=45, ha="right")
+
     plt.tight_layout()
+
     save_plot(save_dir, f"wilcoxon_holm_corrected_{metric_name}_{suffix}.png")
     plt.show()
 
@@ -507,6 +653,7 @@ def run_replicate_pipeline(args: dict):
     """
     repl_glob = args.get("repl_glob")
     save_dir = args.get("save_dir")
+    set_paper_rc()
     alpha = args.get("alpha", 0.05)
     verbose = args.get("verbose", True)
     metric = args.get("metric", "mcc").lower()
