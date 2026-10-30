@@ -101,19 +101,11 @@ def calculate_metrics(y_true, y_pred, y_prob=None):
                 auroc = roc_auc_score(y_true, y_prob, multi_class="ovr", average="macro")
 
                 # AUPRC macro across classes (OVR)
-                # Y = label_binarize(y_true, classes=np.arange(C))  # assumes labels 0..C-1
                 Cprob = y_prob.shape[1]  # number of columns output by the model (0..C-1)
                 classes = np.arange(Cprob)  # expects 0..C-1
                 Y = label_binarize(y_true, classes=classes)
 
                 # if labels aren't 0..C-1, change classes=... accordingly
-                # per_class_ap = []
-                # for c in range(C):
-                #     # skip if class absent in this sample set (can happen in small folds)
-                #     if Y[:, c].sum() == 0:
-                #         continue
-                #     per_class_ap.append(average_precision_score(Y[:, c], y_prob[:, c]))
-                # auprc = float(np.mean(per_class_ap)) if len(per_class_ap) else np.nan
                 per_class_ap = []
                 for c in range(Cprob):
                     if Y[:, c].sum() == 0:

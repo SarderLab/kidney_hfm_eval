@@ -20,14 +20,6 @@ def generate_random_folds(csv_path, seeds, n_splits, out_path):
         folds = np.array_split(perm, n_splits)    # near-equal sized folds
 
         seed_folds = []
-#         for i in range(n_splits):
-#             test_idx = folds[i]
-#             trainval_idx = np.concatenate([folds[j] for j in range(n_splits) if j != i]) if n_splits > 1 else np.array([], dtype=int)
-
-#             seed_folds.append({
-#                 "trainval": trainval_idx.tolist(),
-#                 "test": test_idx.tolist()
-#             })
         for i in range(n_splits):
             test_idx = folds[i]
             trainval_idx = np.concatenate([folds[j] for j in range(n_splits) if j != i]) if n_splits > 1 else np.array([], dtype=int)

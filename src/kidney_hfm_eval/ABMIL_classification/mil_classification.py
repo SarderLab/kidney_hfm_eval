@@ -453,8 +453,6 @@ def run_mil_pipeline(args):
                 model = Attention(vector_size_outer, M=best_params["M"], L=best_params["L"],
                                   dropout=best_params["dropout"], n_classes=C).to(device)
                 opt   = optim.AdamW(get_params_groups(model), lr=best_params["lr"], weight_decay=best_params["weight_decay"],betas=(0.99, 0.9999), eps=1e-4)
-                # lr_s = cosine_scheduler(best_params["lr"], args.lr_end, best_params["epochs"], len(tr_ld), args.warmup_epochs)
-                # wd_s = cosine_scheduler(best_params["weight_decay"], args.weight_decay_end, best_params["epochs"], len(tr_ld), args.warmup_epochs)
 
                 print( "Outer‐fold final training")
                 for epoch in range(1, best_params["epochs"]+1):

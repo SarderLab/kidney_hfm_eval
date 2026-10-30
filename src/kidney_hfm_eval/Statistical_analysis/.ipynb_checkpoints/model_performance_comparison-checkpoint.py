@@ -6,11 +6,10 @@ import seaborn as sns
 from scipy.stats import wilcoxon, friedmanchisquare
 from statsmodels.stats.multitest import multipletests
 from itertools import combinations
+from matplotlib.patches import Patch
 
-
-# ----------------------------------------------------
 # Paper-ready plotting style
-# ----------------------------------------------------
+
 PAPER_STYLE = {
     "title": 22,        
     "label": 22,        # 20
@@ -35,9 +34,9 @@ def set_paper_rc(style=PAPER_STYLE):
         "pdf.fonttype": 42,          # editable text in Illustrator
         "ps.fonttype": 42,
     })
-# ----------------------------------------------------
+    
 # Configuration
-# ----------------------------------------------------
+
 MODEL_ORDER = [
     "UNI", "UNI2-h", "Virchow", "Virchow2",
     "SP22M", "SP85M", "H-optimus-0", "H-optimus-1",
@@ -47,70 +46,107 @@ COLOR_PALETTE = sns.color_palette("tab20", n_colors=len(MODEL_ORDER))
 
 MODEL_COLORS = {model: COLOR_PALETTE[i] for i, model in enumerate(MODEL_ORDER)}
 
+
 def sort_models_by_cld(cld_map, series_map):
+    return sorted(
+        cld_map.keys(),
+        key=lambda m: series_map[m].median(),
+        reverse=True
+    )
+
+def generate_cld_groups(p_holm, models, alpha=0.05, series_map=None):
     """
-    Sort models by CLD letter first (a < b < c < ...),
-    then within group by mean performance (high → low).
+    Generate a valid Compact Letter Display (CLD).
+
+    Rules:
+    - Significant pair (p < alpha): no shared letters.
+    - Non-significant pair (p >= alpha): at least one shared letter.
+    - Models may belong to multiple overlapping groups.
+
+    Groups are ranked by model mean performance.
     """
-    grouped = {}
-    for m, g in cld_map.items():
-        grouped.setdefault(g, []).append(m)
+    from itertools import combinations
+    import string
+    import numpy as np
 
-    # sort groups alphabetically a < b < c ...
-    sorted_models = []
-    for g in sorted(grouped.keys()):
-        # sort models within group by descending mean performance
-        models = grouped[g]
-        models_sorted = sorted(models, key=lambda m: series_map[m].mean(), reverse=True)
-        sorted_models.extend(models_sorted)
+    p = p_holm.loc[models, models].astype(float)
 
-    return sorted_models
-
-
-def generate_cld_groups(p_holm, models, alpha=0.05):
-    """
-    True Compact Letter Display Groups based on complete-link rule.
-    All models within a group must be mutually NOT significantly different.
-    """
-
-    # Significant differences matrix
-    sig = p_holm < alpha
-    np.fill_diagonal(sig.values, False)
-
-    # Start with each model in its own group
-    groups = {m: set([m]) for m in models}
-
-    # Try to merge groups only when fully NSD
+    # Validate pairwise p-values
     for a, b in combinations(models, 2):
-        if not sig.loc[a, b]:  # NSD → candidate for grouping
+        if not np.isfinite(p.loc[a, b]):
+            raise ValueError(f"Invalid p-value for {a} vs {b}")
 
-            merged = groups[a] | groups[b]
+    # Find maximal non-significant groups
+    # Enumerating all subsets is efficient for 11 models.
+    maximal_groups = []
 
-            # Check every pair in this merged set
-            fully_nsd = True
-            for x, y in combinations(merged, 2):
-                if sig.loc[x, y]:  # any significant → fail
-                    fully_nsd = False
-                    break
+    for size in range(len(models), 0, -1):
+        for combo in combinations(models, size):
 
-            # If valid, merge groups
-            if fully_nsd:
-                for m in merged:
-                    groups[m] = merged
+            # All pairs must be non-significant
+            if all(
+                p.loc[a, b] >= alpha
+                for a, b in combinations(combo, 2)
+            ):
+                group = frozenset(combo)
 
-    # Assign group letters based on unique merged sets
-    unique_groups = {}
-    letter = ord('a')
-    cld_map = {}
+                # Keep only maximal groups
+                if not any(
+                    group.issubset(existing)
+                    for existing in maximal_groups
+                ):
+                    maximal_groups.append(group)
 
-    for m in models:
-        group = tuple(sorted(groups[m]))
-        if group not in unique_groups:
-            unique_groups[group] = chr(letter)
-            letter += 1
-        cld_map[m] = unique_groups[group]
+    # Rank models by descending mean performance
+    if series_map is not None:
+        ranked_models = sorted(
+            models,
+            key=lambda m: series_map[m].median(),
+            reverse=True
+        )
+    else:
+        ranked_models = list(models)
+
+    rank = {m: i for i, m in enumerate(ranked_models)}
+
+    # Rank groups by their member performance ranks
+    maximal_groups.sort(
+        key=lambda group: tuple(
+            sorted(rank[m] for m in group)
+        )
+    )
+
+    # Assign letters to overlapping groups
+    alphabet = string.ascii_lowercase + string.ascii_uppercase
+
+    if len(maximal_groups) > len(alphabet):
+        raise ValueError("Too many CLD groups for available letters.")
+
+    cld_map = {m: "" for m in models}
+
+    for i, group in enumerate(maximal_groups):
+        letter = alphabet[i]
+        for m in group:
+            cld_map[m] += letter
+
+    # Validate every pair against the Holm-adjusted matrix
+    for a, b in combinations(models, 2):
+        shared_letters = bool(
+            set(cld_map[a]) & set(cld_map[b])
+        )
+        non_significant = p.loc[a, b] >= alpha
+
+        if shared_letters != non_significant:
+            raise AssertionError(
+                f"CLD mismatch: {a} vs {b}, "
+                f"p={p.loc[a, b]:.6g}, "
+                f"letters={cld_map[a]}/{cld_map[b]}"
+            )
+
+    print("\nCLD validation passed: all pairwise comparisons agree.")
 
     return cld_map
+
 
 def relabel_cld_by_performance(cld_map, series_map):
     """
@@ -173,10 +209,6 @@ def plot_box_ungrouped(series_map, models, metric_name="MCC", save_dir=None, suf
     ax.tick_params(axis="x", labelsize=PAPER_STYLE["tick"])
     ax.tick_params(axis="y", labelsize=PAPER_STYLE["tick"])
     # ---- Add Legend ----
-    handles = [plt.Line2D([0], [0], color=MODEL_COLORS[m], lw=8) for m in models]
-    ax.legend(handles, models, title="Models", bbox_to_anchor=(1.02, 1), loc="upper left")
-
-    plt.title(f"{metric_name} – Ungrouped Boxplot", fontsize=20)
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
 
@@ -210,9 +242,6 @@ def plot_violin_ungrouped(series_map, models, metric_name="MCC", save_dir=None, 
     ax.set_ylabel(metric_name, fontsize=PAPER_STYLE["label"])
     ax.tick_params(axis="x", labelsize=PAPER_STYLE["tick"])
     ax.tick_params(axis="y", labelsize=PAPER_STYLE["tick"])    # ---- Add Legend ----
-    handles = [plt.Line2D([0], [0], color=MODEL_COLORS[m], lw=8) for m in models]
-    ax.legend(handles, models, title="Models", bbox_to_anchor=(1.02, 1), loc="upper left")
-
     plt.title(f"{metric_name} – Ungrouped Violin Plot", fontsize=20)
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
@@ -248,7 +277,8 @@ def plot_box_grouped(series_map, models, cld_map, metric_name="MCC",
         boxprops={"linewidth": 1.8},
         medianprops={"linewidth": 2.2, "color": "black"},
     )
-    ax.set_title("Model Performance with CLD-Based Grouping and Ranking", fontsize=PAPER_STYLE["title"])
+    ax.set_title("Model Performance with CLD-Based Grouping and Ranking",
+             fontsize=PAPER_STYLE["title"])
     ax.set_xlabel("Model", fontsize=PAPER_STYLE["label"])
     ax.set_ylabel(metric_name, fontsize=PAPER_STYLE["label"])
     ax.tick_params(axis="x", labelsize=PAPER_STYLE["tick"])
@@ -261,9 +291,6 @@ def plot_box_grouped(series_map, models, cld_map, metric_name="MCC",
                 fontsize=PAPER_STYLE["cld"], fontweight="bold")
     # ---- Expand y-limit to ensure visibility ----
     ax.set_ylim(ymin, ymax + 0.10 * (ymax - ymin))
-
-    # plt.title(f"{metric_name} – Boxplot Grouped by CLD (Sorted)", fontsize=20)
-    plt.title(f"Model Performance with CLD-Based Grouping and Ranking", fontsize=20)
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
     save_plot(save_dir, f"grouped_boxplot_CLD_sorted_{metric_name}{suffix}.png")
@@ -297,7 +324,8 @@ def plot_violin_grouped(series_map, models, cld_map, metric_name="MCC",
         alpha=0.9,
         linewidth=1.5
     )
-    ax.set_title(f"{metric_name} – Ungrouped Violin Plot", fontsize=PAPER_STYLE["title"])
+    ax.set_title("Model Performance with CLD-Based Grouping and Ranking",
+             fontsize=PAPER_STYLE["title"])
     ax.set_xlabel("Model", fontsize=PAPER_STYLE["label"])
     ax.set_ylabel(metric_name, fontsize=PAPER_STYLE["label"])
     ax.tick_params(axis="x", labelsize=PAPER_STYLE["tick"])
@@ -311,10 +339,11 @@ def plot_violin_grouped(series_map, models, cld_map, metric_name="MCC",
                 fontsize=PAPER_STYLE["cld"], fontweight="bold")
     # ---- Expand y-limit to ensure visibility ----
     ax.set_ylim(ymin, ymax + 0.10 * (ymax - ymin))
-
-    # plt.title(f"{metric_name} – Violin Plot Grouped by CLD (Sorted)", fontsize=20)
-    plt.title(f"Model Performance with CLD-Based Grouping and Ranking", fontsize=20)
     plt.xticks(rotation=45, ha="right")
+    
+    from matplotlib.patches import Patch
+
+    # ---- Legend ----
     plt.tight_layout()
     save_plot(save_dir, f"grouped_violinplot_CLD_sorted_{metric_name}{suffix}.png")
     plt.show()
@@ -338,21 +367,16 @@ def make_cld_table(series_map, cld_map, metric="mcc"):
     ])
 
     # Sort by CLD group first, then by mean within each group
-    df = df.sort_values(["CLD", "Mean"], ascending=[True, False]).reset_index(drop=True)
-
+    df = df.sort_values(
+        "Median",
+        ascending=False
+    ).reset_index(drop=True)
     return df
 
 def ensure_dir(path):
     """Create directory if it doesn't exist."""
     os.makedirs(path, exist_ok=True)
 
-
-# def save_plot(save_dir, filename, dpi=300):
-#     """Save current matplotlib figure to directory."""
-#     if save_dir:
-#         full_path = os.path.join(save_dir, filename)
-#         plt.savefig(full_path, bbox_inches="tight", dpi=dpi)
-#         print(f" Saved figure: {full_path}")
 def save_plot(save_dir, filename, dpi=300):
     if save_dir:
         full_path = os.path.join(save_dir, filename)
@@ -417,11 +441,6 @@ def plot_summary(summary_df, save_dir=None, metric_name="MCC", suffix=""):
         edgecolor="black"
     )
 
-    # Decorate
-    # plt.ylabel(metric_name, fontsize=16)
-    # plt.xlabel("Model", fontsize=16)
-    # plt.title(f"Mean {metric_name} per Model (95% CI)", fontsize=18)
-    # plt.xticks(rotation=45, ha="right", fontsize=12)
     plt.ylabel(metric_name, fontsize=PAPER_STYLE["label"])
     plt.xlabel("Model", fontsize=PAPER_STYLE["label"])
     plt.title(f"Mean {metric_name} per Model (95% CI)", fontsize=PAPER_STYLE["title"])
@@ -441,9 +460,8 @@ def plot_violin(series_map, models, save_dir=None, metric_name="MCC", suffix="")
     )
     plt.figure(figsize=(10, 6))
     sns.violinplot(data=df_long, x="Model", y= metric_name, order=models, inner="box", cut=0, scale="width")
-    # sns.stripplot(data=df_long, x="Model", y="MCC", order=models, color="black", size=2, alpha=0.5)
     plt.ylabel(metric_name, fontsize=16)
-    plt.xlabel("Model", fontsize=16)
+    plt.xlabel("Model", fontsize=PAPER_STYLE["label"])
     plt.title(f"Distribution of {metric_name} Replicates per Model", fontsize=18)
     plt.xticks(rotation=45, ha="right", fontsize=12)
     plt.tight_layout()
@@ -492,33 +510,6 @@ def run_wilcoxon_posthoc(df_paired, models, alpha=0.05, save_dir=None, metric_na
     np.fill_diagonal(p_raw.values, 0)
     np.fill_diagonal(p_holm.values, 0)
 
-    # --- Raw p-value heatmap ---
-#     plt.figure(figsize=(10, 8))
-#     # sns.heatmap(p_raw, annot=True, fmt=".3f", cmap="viridis_r",
-#     #             xticklabels=models, yticklabels=models,
-#     #             cbar_kws={'label': 'Raw p-value'})
-#     ax = sns.heatmap(
-#         p_raw,
-#         annot=True,
-#         fmt=".3f",
-#         cmap="viridis_r",
-#         xticklabels=models,
-#         yticklabels=models,
-#         cbar_kws={'label': 'Raw p-value'},
-#         annot_kws={"size": PAPER_STYLE["heat_annot"]}  # <- key line
-#     )
-
-#     ax.set_title("Pairwise Wilcoxon signed-rank (Raw p-values)", fontsize=PAPER_STYLE["title"])
-#     ax.set_xlabel("", fontsize=PAPER_STYLE["label"])
-#     ax.set_ylabel("", fontsize=PAPER_STYLE["label"])
-#     ax.tick_params(axis="x", labelsize=PAPER_STYLE["tick"])
-#     ax.tick_params(axis="y", labelsize=PAPER_STYLE["tick"])
-#     plt.xticks(rotation=45, ha="right")
-    
-#     plt.title("Pairwise Wilcoxon signed-rank (Raw p-values)", fontsize=18)
-#     plt.xticks(rotation=45, ha="right")
-#     plt.tight_layout()
-
     plt.figure(figsize=(10, 8))
 
     ax = sns.heatmap(
@@ -549,33 +540,6 @@ def run_wilcoxon_posthoc(df_paired, models, alpha=0.05, save_dir=None, metric_na
 
     save_plot(save_dir, f"wilcoxon_raw_pvalues_{metric_name}_{suffix}.png")
     plt.show()
-
-    # --- Holm–Bonferroni adjusted p-value heatmap ---
-#     plt.figure(figsize=(10, 8))
-#     # sns.heatmap(p_holm, annot=True, fmt=".3f", cmap="viridis_r",
-#     #             xticklabels=models, yticklabels=models,
-#     #             cbar_kws={'label': 'Holm-adjusted p-value'})
-#     ax = sns.heatmap(
-#         p_raw,
-#         annot=True,
-#         fmt=".3f",
-#         cmap="viridis_r",
-#         xticklabels=models,
-#         yticklabels=models,
-#         cbar_kws={'label': 'Raw p-value'},
-#         annot_kws={"size": PAPER_STYLE["heat_annot"]}  # <- key line
-#     )
-
-#     ax.set_title("Pairwise Wilcoxon signed-rank (Raw p-values)", fontsize=PAPER_STYLE["title"])
-#     ax.set_xlabel("", fontsize=PAPER_STYLE["label"])
-#     ax.set_ylabel("", fontsize=PAPER_STYLE["label"])
-#     ax.tick_params(axis="x", labelsize=PAPER_STYLE["tick"])
-#     ax.tick_params(axis="y", labelsize=PAPER_STYLE["tick"])
-#     plt.xticks(rotation=45, ha="right")
-    
-#     plt.title("Pairwise Wilcoxon signed-rank (Holm–Bonferroni corrected)", fontsize=18)
-#     plt.xticks(rotation=45, ha="right")
-#     plt.tight_layout()
     plt.figure(figsize=(10, 8))
 
     ax = sns.heatmap(
@@ -597,13 +561,10 @@ def run_wilcoxon_posthoc(df_paired, models, alpha=0.05, save_dir=None, metric_na
     cbar.ax.tick_params(labelsize=PAPER_STYLE["tick"])
     cbar.set_label("Holm-adjusted p-value",
                    fontsize=PAPER_STYLE["label"])
-
     plt.title("Pairwise Wilcoxon signed-rank (Holm–Bonferroni corrected)",
-              fontsize=PAPER_STYLE["title"])
+          fontsize=PAPER_STYLE["title"])
     plt.xticks(rotation=45, ha="right")
-
     plt.tight_layout()
-
     save_plot(save_dir, f"wilcoxon_holm_corrected_{metric_name}_{suffix}.png")
     plt.show()
 
@@ -634,7 +595,12 @@ def plot_cld_violin(series_map, models, cld_map, metric_name="MCC", save_dir=Non
         y = df_long[df_long["Model"] == m][metric_name].max() + 0.02
         plt.text(i, y, cld_map[m], ha="center", fontsize=14, fontweight="bold")
 
-    plt.title(f"{metric_name} distribution with CLD grouping")
+    plt.title(
+        "Model Performance with CLD-Based Grouping and Ranking",
+        fontsize=PAPER_STYLE["title"]
+    )
+    plt.xlabel("Model", fontsize=PAPER_STYLE["label"])
+    plt.ylabel(metric_name, fontsize=PAPER_STYLE["label"])    
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
 
@@ -684,14 +650,18 @@ def run_replicate_pipeline(args: dict):
 
     if not models:
         raise ValueError(" No valid models found in the directory or args['models'].")
-
+    # Sort all models by descending median performance
+    models = sorted(
+        models,
+        key=lambda m: series_map[m].median(),
+        reverse=True
+    )
     # Step 3: Create output directory if needed
     if save_dir:
         ensure_dir(save_dir)
 
     # Step 4: Compute summary stats and save
-    summary_df = make_summary_df(series_map, model_order, metric)
-
+    summary_df = make_summary_df(series_map, models, metric)
     # --- Step 4: Save summary ---
     summary_path = os.path.join(save_dir, f"summary_{metric}_95CI{suffix}.csv")
     summary_df.to_csv(summary_path)
@@ -708,9 +678,6 @@ def run_replicate_pipeline(args: dict):
     plot_violin(series_map, models, save_dir, metric_name=metric.upper(), suffix=suffix)
 
     # --- Step 6: Stats ---
-    # run_wilcoxon_posthoc(df_paired, models, alpha=alpha, save_dir=save_dir, suffix=suffix)
-    # friedman_p, p_raw, p_holm = run_wilcoxon_posthoc(df = pd.data
-    #     df_paired, models, alpha=alpha, save_dir=save_dir, suffix=suffix)
     friedman_p, p_raw, p_holm = run_wilcoxon_posthoc(
         df_paired,
         models,
@@ -720,11 +687,8 @@ def run_replicate_pipeline(args: dict):
         suffix=suffix
     )
 
-    # -----------------------------
     # Step 7: Compact Letter Display (CLD)
-    # -----------------------------
-    cld_map = generate_cld_groups(p_holm.loc[models, models], models, alpha=alpha)
-    cld_map = relabel_cld_by_performance(cld_map, series_map)
+    cld_map = generate_cld_groups(p_holm, models, alpha=alpha, series_map=series_map)    
 
     print("\nFinal CLD groups (performance-ranked):")
     for m, g in cld_map.items():
@@ -758,7 +722,7 @@ def run_replicate_pipeline(args: dict):
 
 if __name__ == "__main__":
     args = {
-        "repl_glob": "/blue/pinaki.sarder/harishwarreddy.k/Validation_of_Hist_FMs_new/Probing/Patch/Tubule/binary_bootstrap_replicates_LR_*.csv",
-        "save_dir": "/blue/pinaki.sarder/harishwarreddy.k/Validation_of_Hist_FMs_new/Probing/Stats/Tubule_LR"
+        "repl_glob": "",
+        "save_dir": ""
     }
     run_replicate_pipeline(args)

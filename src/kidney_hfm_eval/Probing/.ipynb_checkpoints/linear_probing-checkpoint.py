@@ -222,9 +222,6 @@ def run_bootstrap(fold_results, classes, B=1000, seed=0, sample_frac=None):
             grp_map[sampleid].append((yt, yp))
     all_ids = list(grp_map.keys())
     counts = [len(v) for v in grp_map.values()]
-    # print("Tiles with 1 prediction:", counts.count(1))
-    # print("Tiles with 2 predictions:", counts.count(2))
-    # print("Tiles with 3 predictions:", counts.count(3))
     # print("Total predictions:", sum(counts))
     print("Dataset size (#unique tiles):", len(counts))
     # print("Average predictions per tile:", sum(counts) / len(counts))
