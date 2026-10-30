@@ -1,4 +1,22 @@
+# Jupyter
 .ipynb_checkpoints/
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local secrets
+.env.ipynb_checkpoints/
 __pycache__/
 *.pyc
 dist/
